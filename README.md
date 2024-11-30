@@ -3,6 +3,7 @@
 This is a satelite repo for the paper [Advanced coarse-grained model of the ribosome exit tunnel for fast simulation of the nascent polypeptide chain dynamics](#citation_url).
 
 
+
 ### Layout prototype during development:
 
 ```
@@ -14,6 +15,8 @@ This is a satelite repo for the paper [Advanced coarse-grained model of the ribo
 │   └── Wenjun's alpha shape code
 ├── mesh_generation
 │   └── Artem mesh gen code
+├── data             
+├── examples
 ├── cli.py 
 └──requirements.txt
 ```
