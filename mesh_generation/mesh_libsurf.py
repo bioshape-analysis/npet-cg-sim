@@ -1,20 +1,14 @@
-import argparse
 from pprint import pprint
 import subprocess
-import typing
 from matplotlib import pyplot as plt
 import open3d as o3d
 import pyvista as pv
-import json
-import os
 import numpy as np
-import numpy as np
-from compas.geometry import bounding_box
 import plyfile
 import warnings
-warnings.filterwarnings("ignore")
+# warnings.filterwarnings("ignore")
 
-POISSON_RECON_BIN = "kazhdan_binary"
+POISSON_RECON_BIN = "/home/rtviii/dev/npet-cg-sim/PoissonRecon"
 def apply_poisson_reconstruction(surf_estimated_ptcloud_path: str, output_path: str, recon_depth:int=6, recon_pt_weight:int=3):
     # The documentation can be found at https://www.cs.jhu.edu/~misha/Code/PoissonRecon/Version16.04/ in "PoissonRecon" binary
     command = [

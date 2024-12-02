@@ -1,4 +1,5 @@
 import click
+from alpha_shape.lib import produce_alpha_contour
 from mesh_generation.kdtree_approach import main
 import sys
 sys.dont_write_bytecode = True
@@ -9,12 +10,13 @@ def cli():
     pass
 
 @cli.command()
-@click.option('--mode', default='default', help='Operation mode for alpha command')
-@click.argument('input_file', type=click.Path(exists=True))
-def alpha(mode, input_file):
+# @click.option('--mode', default='default', help='Operation mode for alpha command')
+# @click.argument('input_file', type=click.Path(exists=True))
+def alpha():
+    produce_alpha_contour('4UG0', 0.05)
     """Alpha command with configurable mode and input file."""
-    click.echo(f"Alpha command executed with mode: {mode}")
-    click.echo(f"Input file: {input_file}")
+    # click.echo(f"Alpha command executed with mode: {mode}")
+    # click.echo(f"Input file: {input_file}")
 
 @cli.group()
 def mesh():

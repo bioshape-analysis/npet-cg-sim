@@ -1,8 +1,11 @@
 from pprint import pprint
 from typing import Tuple
+import open3d as o3d
 import numpy as np
 from mesh_generation.tunnel_bbox_ptc_constriction import filter_residues_parallel, ribosome_entities
 from scipy.spatial import cKDTree
+import sys
+sys.dont_write_bytecode = True
 import pyvista as pv
 from mesh_generation.mesh_visualization import visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs, visualize_mesh, visualize_pointcloud
 from mesh_generation.mesh_full_pipeline import DBSCAN_capture, DBSCAN_pick_largest_cluster
@@ -199,41 +202,39 @@ def  clip_pcd_via_ashape(pcd: np.ndarray, mesh: pv.PolyData) -> Tuple[np.ndarray
 
 def main():
     RCSB_ID   = '4ug0'.upper()
-    # cifpath   = "./data/{}/{}.cif".format(RCSB_ID, RCSB_ID)
-    # R         = 40
-    # H         = 100
-    # Vsize     = 1
-    # ATOM_SIZE = 2
+    cifpath   = "./data/{}/{}.cif".format(RCSB_ID, RCSB_ID)
+    R         = 40
+    H         = 100
+    Vsize     = 1
+    ATOM_SIZE = 2
 
-    # ptc_pt          = np.array(landmark_ptc(RCSB_ID))
-    # constriction_pt = np.array(landmark_constriction_site(RCSB_ID))
+    ptc_pt          = np.array(landmark_ptc(RCSB_ID))
+    constriction_pt = np.array(landmark_constriction_site(RCSB_ID))
 
-    # residues           = filter_residues_parallel(ribosome_entities(RCSB_ID, cifpath,'R'), ptc_pt, constriction_pt, R, H)
-    # points             = np.array([atom.get_coord() for residue in residues for atom in residue.child_list])
-    # transformed_points = transform_points_to_C0(points, ptc_pt, constriction_pt)
+    residues           = filter_residues_parallel(ribosome_entities(RCSB_ID, cifpath,'R'), ptc_pt, constriction_pt, R, H)
+    points             = np.array([atom.get_coord() for residue in residues for atom in residue.child_list])
+    transformed_points = transform_points_to_C0(points, ptc_pt, constriction_pt)
 
-    # mask, (x, y, z) = create_point_cloud_mask(
-    #     transformed_points,
-    #     radius              = R,
-    #     height              = H,
-    #     voxel_size          = Vsize,
-    #     radius_around_point = ATOM_SIZE
-    # )
+    mask, (x, y, z) = create_point_cloud_mask(
+        transformed_points,
+        radius              = R,
+        height              = H,
+        voxel_size          = Vsize,
+        radius_around_point = ATOM_SIZE
+    )
     
-    # points = np.where(~mask)
-    # empty_coordinates = np.column_stack((
-    #     x[points[0]], 
-    #     y[points[1]], 
-    #     z[points[2]]
-    # ))
-    # back_projected    = transform_points_from_C0(empty_coordinates ,ptc_pt,constriction_pt)
+    points = np.where(~mask)
+    empty_coordinates = np.column_stack((
+        x[points[0]], 
+        y[points[1]], 
+        z[points[2]]
+    ))
+    back_projected    = transform_points_from_C0(empty_coordinates ,ptc_pt,constriction_pt)
 
-    mesh_path = "./data/{}/alpha_shape_watertight_{}.ply".format(RCSB_ID, RCSB_ID)
-    mesh      = pv.read(mesh_path)
+    mesh_path   = "./data/{}/alpha_shape_watertight_{}.ply".format(RCSB_ID, RCSB_ID)
+    normals_pcd = "{}.normal_estimated_pcd.ply".format(RCSB_ID)
+    mesh        = pv.read(mesh_path)
     diagnostics = verify_mesh_quality(mesh)
-    pprint(diagnostics)
-    visualize_mesh(mesh)
-    exit()
     select    = pv.PolyData( back_projected ).select_enclosed_points(mesh)
     mask      = select['SelectedPoints']
     interior  = back_projected[mask == 1]
@@ -242,15 +243,16 @@ def main():
 
 
 
-    _u_EPSILON_initial_pass = 5.5 
-    _u_MIN_SAMPLES_initial_pass =  600
-    _u_EPSILON_refinement = 3.5
-    _u_MIN_SAMPLES_refinement = 175
+    _u_EPSILON_initial_pass     = 5.5
+    _u_MIN_SAMPLES_initial_pass = 600
+    _u_EPSILON_refinement       = 3.5
+    _u_MIN_SAMPLES_refinement   = 175
 
-    d3d_alpha = 2
-    d3d_tol = 1
-    PR_depth = 6
+    d3d_alpha   = 2
+    d3d_tol     = 1
+    PR_depth    = 6
     PR_ptweight = 3
+
     db, clusters_container = DBSCAN_capture(empty_in_world_coords , _u_EPSILON_initial_pass, _u_MIN_SAMPLES_initial_pass)
     #! [ Extract the largest cluster from the DBSCAN clustering ]
     visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs( clusters_container, _u_EPSILON_initial_pass, _u_MIN_SAMPLES_initial_pass)
@@ -261,7 +263,7 @@ def main():
 
     #! [ Transform the cluster back into original coordinate frame ]
     surface_pts = ptcloud_convex_hull_points( refined, d3d_alpha, d3d_tol )
-    visualize_pointcloud( surface_pts, RCSB_ID, False, "{}.surface_pts.gif".format(RCSB_ID) )
+    visualize_pointcloud( surface_pts, RCSB_ID)
 
     #! [ Transform the cluster back into Original Coordinate Frame ]
     normal_estimated_pcd = estimate_normals(
@@ -270,12 +272,16 @@ def main():
         kdtree_max_nn               = 15,
         correction_tangent_planes_n = 10,
     )
+    o3d.io.write_point_cloud(normals_pcd, normal_estimated_pcd)
+    
     apply_poisson_reconstruction(
-        normal_estimated_pcd,
+        normals_pcd,
         "{}.poisson_recon.ply".format(RCSB_ID),
         recon_depth=PR_depth,
         recon_pt_weight=PR_ptweight,
     )
+    
+    visualize_mesh( "{}.poisson_recon.ply".format(RCSB_ID) )
 
     
 

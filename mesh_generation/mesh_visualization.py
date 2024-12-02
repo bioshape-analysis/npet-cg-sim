@@ -1104,9 +1104,11 @@ def DBSCAN_CLUSTERS_visualize_largest(positive_space: np.ndarray, dbscan_cluster
         plotter.show()
 
 
-def visualize_mesh(mesh, rcsb_id:str|None=None, gif:bool=False, gif_name:str|None=None):
-    plotter                        = pv.Plotter(off_screen=gif)
-    _ = plotter.add_mesh(mesh, opacity=0.8)
+def visualize_mesh(mesh_path, rcsb_id:str|None=None, gif:bool=False, gif_name:str|None=None):
+    plotter = pv.Plotter(off_screen=gif)
+
+
+    _ = plotter.add_mesh(pv.read(mesh_path), opacity=0.8)
     plotter.add_axes(line_width=2,cone_radius=0.7, shaft_length=0.7, tip_length=0.3, ambient=0.5, label_size=(0.2, 0.8))
     plotter.add_text('RCSB_ID:{}'.format(rcsb_id if rcsb_id is not None else "" ), position='upper_right', font_size=14, shadow=True, font='courier', color='black')
     plotter.show_grid( n_xlabels=8, n_ylabels=8, n_zlabels=8, font_size = 8)
