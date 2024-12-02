@@ -6,10 +6,6 @@ import pyvista as pv
 import json
 import numpy as np
 import numpy as np
-from mesh_generation.mesh_paths import *
-from ribctl import EXIT_TUNNEL_WORK, POISSON_RECON_BIN, RIBETL_DATA
-from ribctl.ribosome_ops import RibosomeOps, Structure
-from ribctl.lib.libmsa import Taxid
 
 hexcolors = {
     'aliceblue'           : '#F0F8FF',
@@ -997,33 +993,6 @@ dbscan_pairs = [
     (5.5,600)
 ]
 
-def retrieve_ptc_and_chain_atoms(rcsb_id):
-        with open( tunnel_atom_encoding_path(rcsb_id), "r", ) as infile:
-            bbox_atoms: list[dict] = json.load(infile)
-            _atom_centers       = np.array(list(map(lambda x: x["coord"], bbox_atoms)))
-            _vdw_radii          = np.array(list(map(lambda x: x["vdw_radius"], bbox_atoms)))
-
-            # normalized_sphere_cords, translation_vectors = normalize_atom_coordinates(_atom_centers)
-            # voxel_size = 1
-            # sphere_cords_quantized = np.round( np.array(normalized_sphere_cords / voxel_size) ).astype(int)
-            # max_values      = np.max(sphere_cords_quantized, axis=0)
-            # grid_dimensions = max_values + 1
-
-        with open( ptc_data_path(rcsb_id), "r", ) as infile:
-            ptc_data = json.load(infile)
-
-        atom_coordinates_by_chain: dict[str, list] = {}
-        for atom in bbox_atoms:
-            if len(atom["chain_nomenclature"]) < 1:
-                # print( "atom ", atom, "has no chain nomenclature", atom["chain_nomenclature"] )
-                continue
-            if atom["chain_nomenclature"][0] not in atom_coordinates_by_chain:
-                atom_coordinates_by_chain[atom["chain_nomenclature"][0]] = []
-            atom_coordinates_by_chain[atom["chain_nomenclature"][0]].extend([atom["coord"]])
-
-        ptc_midpoint = np.array(ptc_data["midpoint_coordinates"])
-
-        return ptc_midpoint, atom_coordinates_by_chain
 
 def visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs( dbscan_cluster_dict: dict[int, list], eps, min_nbrs, gif:bool=False, gif_name:str|None=None):
     plotter               = pv.Plotter(off_screen=gif)
@@ -1134,101 +1103,6 @@ def DBSCAN_CLUSTERS_visualize_largest(positive_space: np.ndarray, dbscan_cluster
     else:
         plotter.show()
 
-def plot_multiple_surfaces(rcsb_id:str):
-
-    rcsb_id   = rcsb_id.upper()
-    src_taxid = RibosomeOps(rcsb_id).get_taxids()[0][0]
-    taxname   = list( Taxid.get_name(str(src_taxid)).items() )[0][1]
-    plotter               = pv.Plotter(shape=(2, 4))
-
-
-    ptc_midpoint, atom_coordinates_by_chain, grid_dimensions, mean_abs_vectors = retrieve_ptc_and_chain_atoms(rcsb_id)
-
-    #! * FOR EACH SUBPLOT *
-    for (i,j) in [(0,0),(0,1),(0,2),(0,3),(1,0),(1,1),(1,2),(1,3)]:
-        plotter.subplot(i,j)
-
-        eps, min_nbrs = dbscan_pairs[i*4+j]
-        # ? Add mesh to the plotter
-        mesh_  = pv.read(custom_cluster_recon_path(rcsb_id, eps, min_nbrs))
-        plotter.add_mesh(mesh_, opacity=0.5)
-
-
-        pprint(list(atom_coordinates_by_chain.keys()))
-
-        for i, ( chain_name, coords ) in enumerate(atom_coordinates_by_chain.items()):
-            # print("Plotting " + chain_name, "with index", i ,)
-            # ? Adding coordinates to the plotter for each chain( coordinates and color )
-            plotter.add_points(
-                move_cords_to_normalized_cord_frame(grid_dimensions, mean_abs_vectors, np.array(coords)),
-                  point_size               = 6 if chain_name in ["eL39","uL4","uL22","uL23"] else 2 if "rRNA" in chain_name else 4 ,
-                  color                    =  'gray' if "rRNA" in chain_name else "cyan" if chain_name == "eL39" else "lightgreen" if chain_name == "uL4" else "gold" if chain_name =="uL22" else 'magenta' if chain_name =='uL23' else CHAIN_LANDMARK_COLORS[i],
-                  opacity                  = 0.1 if chain_name not in ["eL39","uL4","uL22",'uL23'] else 1 ,
-                  render_points_as_spheres = True ,
-            )
-
-        for i, (label, color) in enumerate([( 'eL39','cyan' ),( 'uL4','lightgreen' ),( 'uL22','gold' ), ('uL23','magenta')]):
-            offset   = i * 50  # Adjust the offset as needed
-            position = (20, 200 - offset, 0)
-            plotter.add_text( label, position=position, font_size=20, font=FONT,color=color, shadow=True )
-
-
-        plotter.add_points( move_cords_to_normalized_cord_frame( grid_dimensions, mean_abs_vectors, np.array([ptc_midpoint]) ), point_size=PTC_PT_SIZE, color="red", render_points_as_spheres=True, )
-        plotter.add_text('RCSB_ID:{}'.format(rcsb_id), position='upper_right', font_size=14, shadow=True, font=FONT, color='black')
-        plotter.add_text('eps: {} \nmin_nbrs: {}'.format(eps, min_nbrs), position='upper_left', font_size=8, shadow=True, font=FONT, color='black')
-        plotter.add_text('Volume: {}'.format(round(mesh_.volume, 3)), position='lower_left', font_size=8, shadow=True, font=FONT, color='black')
-        plotter.add_text('{}'.format(taxname), position='lower_right', font_size=8, shadow=True, font=FONT, color='black') 
-        
-
-    plotter.show()
-
-def plot_multiple_by_kingdom(kingdom:typing.Literal['bacteria','archaea','eukaryota'], eps:float, min_nbrs:int):
-
-    plotter               = pv.Plotter(shape=(2, 4))
-
-
-    for (i,j) in [(0,0),(0,1),(0,2),(0,3),(1,0),(1,1),(1,2),(1,3)]:
-        try:
-            plotter.subplot(i,j)
-
-            rcsb_id   = diagram_tunnels[kingdom][i*4+j]
-            src_taxid = RibosomeOps(rcsb_id).get_taxids()[0][0]
-            taxname   = list( Taxid.get_name(str(src_taxid)).items() )[0][1]
-
-            ptc_midpoint, atom_chains_dict, grid_dimensions, translation_vectors = retrieve_ptc_and_chain_atoms(rcsb_id)
-
-
-            # ? Add mesh to the plotter
-            mesh_  = pv.read(custom_cluster_recon_path(rcsb_id, eps, min_nbrs))
-            plotter.add_mesh(mesh_, opacity=0.5)
-
-
-            for i, ( chain_name, coords ) in enumerate(atom_chains_dict.items()):
-                # print("Plotting " + chain_name, "with index", i ,)
-                # ? Adding coordinates to the plotter for each chain( coordinates and color )
-                plotter.add_points(
-                    move_cords_to_normalized_cord_frame(grid_dimensions, translation_vectors, np.array(coords)),
-                      point_size               = 8 if chain_name in ["eL39","uL4","uL22", "uL23"] else 2 if "rRNA" in chain_name else 4 ,
-                      color                    =  'gray' if "rRNA" in chain_name else 'pink' if chain_name =="uL23" else "cyan" if chain_name == "eL39" else "lightgreen" if chain_name == "uL4" else "gold" if chain_name =="uL22" else CHAIN_LANDMARK_COLORS[i],
-                      opacity                  = 0.1 if chain_name not in ["eL39","uL4","uL22", "uL23"] else 1 ,
-                      render_points_as_spheres = True ,
-                )
-
-            # ? Adding PTC coordinatesfor each chain( coordinates and color )
-            plotter.add_points( move_cords_to_normalized_cord_frame( grid_dimensions, translation_vectors, np.array([ptc_midpoint]) ), point_size=PTC_PT_SIZE, color="red", render_points_as_spheres=True, )
-
-            #? Add text labels to the plotter
-            plotter.add_text('RCSB_ID:{}'.format(rcsb_id), position='upper_right', font_size=14, shadow=True, font=FONT, color='black')
-            plotter.add_text('eps: {} \nmin_nbrs: {}'.format(eps, min_nbrs), position='upper_left', font_size=8, shadow=True, font=FONT, color='black')
-            plotter.add_text('Volume: {}'.format(round(mesh_.volume, 3)), position='lower_left', font_size=8, shadow=True, font=FONT, color='black')
-            plotter.add_text('{}'.format(taxname), position='lower_right', font_size=8, shadow=True, font=FONT, color='black') 
-
-        except Exception as e:
-            print(e)
-            continue
-            
-
-    plotter.show()
 
 def visualize_mesh(mesh, rcsb_id:str|None=None, gif:bool=False, gif_name:str|None=None):
     plotter                        = pv.Plotter(off_screen=gif)
@@ -1310,68 +1184,3 @@ def visualize_pointclouds(ptcloud1:np.ndarray, ptcloud2:np.ndarray, background_p
 
 
     plotter.show()
-
-def plot_with_landmarks( rcsb_id: str, poisson_recon_custom_path:str|None=None, gif:bool=False, gif_name:str|None=None):
-    """
-    @translation_vectors is a np.ndarray of shape (2,3) where
-        - the first row is the means of the coordinate set
-        - the second row is the deviations of the normalized coordinate set
-        (to be used to reverse the normalization process or to travel to this coordinate frame)
-    """
-    src_taxid = RibosomeOps(rcsb_id).get_taxids()[0][0]
-    taxname   = list( Taxid.get_name(str(src_taxid)) )[0]
-
-    ptc_midpoint,atom_coordinates_by_chain= retrieve_ptc_and_chain_atoms(rcsb_id)
-
-    if poisson_recon_custom_path == None:
-        poisson_recon = poisson_recon_path(rcsb_id)
-    else:
-        poisson_recon = poisson_recon_custom_path
-
-    print("Opened poisson recon file at \033[32m{}\033[0m".format(poisson_recon))
-    mesh_   = pv.read(poisson_recon)
-    plotter = pv.Plotter(off_screen=gif)
-    plotter.add_mesh(mesh_, opacity=1)
-
-
-    for i, ( chain_name, coords ) in enumerate(atom_coordinates_by_chain.items()):
-        # ? Adding coordinates to the plotter for each chain( coordinates and color )
-        plotter.add_points(
-              np.array(coords),
-              point_size               = 8 if chain_name in ["eL39","uL4","uL22", "uL23"] else 2 if "rRNA" in chain_name else 4 ,
-              color                    =  'gray' if "rRNA" in chain_name else "cyan" if chain_name == "eL39" else 'pink' if chain_name=='uL23' else "lightgreen" if chain_name == "uL4" else "gold" if chain_name =="uL22" else CHAIN_LANDMARK_COLORS[i],
-              opacity                  = 0.1 if chain_name not in ["eL39","uL4","uL22", 'uL23'] else 1 ,
-              render_points_as_spheres = True ,
-        )
-
-    for i, (label, color) in enumerate([( 'eL39','cyan' ),( 'uL4','lightgreen' ),( 'uL22','gold' )]):
-        offset   = i * 50  # Adjust the offset as needed
-        position = (20, 200 - offset, 0)
-        plotter.add_text( label, position=position, font_size=20, font=FONT,color=color, shadow=True )
-
-    plotter.add_text( "rRNA ", position=(20, 250, 0), font_size=20, font=FONT,color='gray', shadow=False )
-    plotter.add_text( "PTC ", position=(20, 300, 0), font_size=20, font=FONT,color='red', shadow=True )
-    plotter.add_points( 
-        # move_cords_to_normalized_cord_frame( grid_dimensions, mean_abs_vectors, np.array([ptc_midpoint]) ),
-        np.array([ptc_midpoint]),
-                        point_size=PTC_PT_SIZE, color="red", render_points_as_spheres=True )
-
-    #!--- Labels ----
-    plotter.add_text('RCSB_ID:{}'.format(rcsb_id), position='upper_right', font_size=14, shadow=True, font=FONT, color='black')
-    # plotter.add_text('eps: {} \nmin_nbrs: {}'.format(eps, min_nbrs), position='upper_left', font_size=8, shadow=True, font=FONT, color='black')
-    plotter.add_text('Tunnel Mesh Volume: {}'.format(round(mesh_.volume, 3)), position='lower_left', font_size=8, shadow=True, font=FONT, color='black')
-    plotter.add_text('{}'.format(taxname), position='lower_right', font_size=8, shadow=True, font=FONT, color='black') 
-
-    if gif:
-        output_gif = gif_name
-        # plotter.camera.zoom(1.5)
-        plotter.open_gif(output_gif)
-
-        # Rotate the camera 360 degrees
-        for angle in range(0, 360, 2):  # 5 degree steps
-            plotter.camera.azimuth = angle
-            plotter.write_frame()
-        plotter.close()
-        print(f"GIF saved as {output_gif}")
-    else:
-        plotter.show()

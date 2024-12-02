@@ -1,3 +1,4 @@
+from pprint import pprint
 from typing import Tuple
 import numpy as np
 from mesh_generation.tunnel_bbox_ptc_constriction import filter_residues_parallel, ribosome_entities
@@ -6,9 +7,9 @@ import pyvista as pv
 from mesh_generation.mesh_visualization import visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs, visualize_mesh, visualize_pointcloud
 from mesh_generation.mesh_full_pipeline import DBSCAN_capture, DBSCAN_pick_largest_cluster
 from mesh_generation.mesh_libsurf import apply_poisson_reconstruction, estimate_normals, ptcloud_convex_hull_points
+from mesh_generation.util import landmark_constriction_site, landmark_ptc
 
 def generate_voxel_centers(radius: float, height: float, voxel_size: float) -> tuple:
-
     nx = ny = int(2 * radius / voxel_size) + 1
     nz = int(height / voxel_size) + 1
     x  = np.linspace(-radius, radius, nx)
@@ -41,6 +42,36 @@ def create_point_cloud_mask(points: np.ndarray,
     
     final_mask = hollow_cylinder | point_cloud_mask
     return final_mask, (x, y, z)
+
+def get_transformation_to_C0(
+    base_point: np.ndarray, axis_point: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Compute transformation matrices to move arbitrary cylinder to C0 configuration.
+    Returns translation vector and rotation matrix.
+    """
+    # Get cylinder axis vector
+    axis = axis_point - base_point
+    axis_length = np.linalg.norm(axis)
+    axis_unit = axis / axis_length
+
+    # Get rotation that aligns axis_unit with [0, 0, 1]
+    z_axis = np.array([0, 0, 1])
+
+    # Use Rodrigues rotation formula to find rotation matrix
+    # that rotates axis_unit to z_axis
+    if np.allclose(axis_unit, z_axis):
+        R = np.eye(3)
+    elif np.allclose(axis_unit, -z_axis):
+        R = np.diag([1, 1, -1])  # 180-degree rotation around x-axis
+    else:
+        v = np.cross(axis_unit, z_axis)
+        s = np.linalg.norm(v)
+        c = np.dot(axis_unit, z_axis)
+        v_skew = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+        R = np.eye(3) + v_skew + (v_skew @ v_skew) * (1 - c) / (s * s)
+
+    return -base_point, R
 
 def transform_points_to_C0(points: np.ndarray, base_point: np.ndarray, axis_point: np.ndarray) -> np.ndarray:
     translation, rotation = get_transformation_to_C0(base_point, axis_point)
@@ -103,16 +134,16 @@ def clip_pointcloud_with_mesh(points: np.ndarray, mesh_path: str) -> np.ndarray:
     
     return clipped_points
 
-def verify_mesh_quality(mesh_path: str) -> dict:
+def verify_mesh_quality(mesh) -> dict:
     """
     Verifies the quality of the input mesh and returns diagnostics.
     """
-    mesh = pv.read(mesh_path)
     stats = {
-        'n_points': mesh.n_points,
-        'n_faces': mesh.n_faces,
+        'n_points'   : mesh.n_points,
+        'n_faces'    : mesh.n_faces,
         'is_manifold': mesh.is_manifold,
-        'bounds': mesh.bounds,
+        'bounds'     : mesh.bounds,
+        'open_edges' : mesh.n_open_edges
     }
     
     try:
@@ -156,40 +187,53 @@ def visualize_clipping_result(original_points: np.ndarray,
     p.add_legend()
     p.show()
 
+def  clip_pcd_via_ashape(pcd: np.ndarray, mesh: pv.PolyData) -> Tuple[np.ndarray, np.ndarray]:
+    
+    # TODO
+    points_poly = pv.PolyData(pcd)
+    select = points_poly.select_enclosed_points(mesh)
+    mask = select['SelectedPoints']
+    ashape_interior = pcd[mask == 1]
+    ashape_exterior = pcd[mask == 0]
+    return ashape_interior, ashape_exterior
 
 def main():
-    # Load your points and transform them as before
-    RCSB_ID    = '4ug0'.upper()
-    R          = 40
-    H          = 100
-    Vsize      = 1
-    ATOM_SIZE  = 2
+    RCSB_ID   = '4ug0'.upper()
+    # cifpath   = "./data/{}/{}.cif".format(RCSB_ID, RCSB_ID)
+    # R         = 40
+    # H         = 100
+    # Vsize     = 1
+    # ATOM_SIZE = 2
 
-    ptc_pt  = np.array(PTC_location(RCSB_ID).location) 
-    constriction_pt = np.array(get_constriction(RCSB_ID) )
+    # ptc_pt          = np.array(landmark_ptc(RCSB_ID))
+    # constriction_pt = np.array(landmark_constriction_site(RCSB_ID))
 
-    residues           = filter_residues_parallel( ribosome_entities(RCSB_ID, 'R'), ptc_pt, constriction_pt, R, H)
-    points             = np.array([atom.get_coord() for residue in residues for atom in residue.child_list])
-    transformed_points = transform_points_to_C0(points, ptc_pt, constriction_pt)
+    # residues           = filter_residues_parallel(ribosome_entities(RCSB_ID, cifpath,'R'), ptc_pt, constriction_pt, R, H)
+    # points             = np.array([atom.get_coord() for residue in residues for atom in residue.child_list])
+    # transformed_points = transform_points_to_C0(points, ptc_pt, constriction_pt)
 
-    mask, (x, y, z) = create_point_cloud_mask(
-        transformed_points,
-        radius              = R,
-        height              = H,
-        voxel_size          = Vsize,
-        radius_around_point = ATOM_SIZE
-    )
+    # mask, (x, y, z) = create_point_cloud_mask(
+    #     transformed_points,
+    #     radius              = R,
+    #     height              = H,
+    #     voxel_size          = Vsize,
+    #     radius_around_point = ATOM_SIZE
+    # )
     
-    points = np.where(~mask)
-    empty_coordinates = np.column_stack((
-        x[points[0]], 
-        y[points[1]], 
-        z[points[2]]
-    ))
-    back_projected    = transform_points_from_C0(empty_coordinates ,ptc_pt,constriction_pt)
+    # points = np.where(~mask)
+    # empty_coordinates = np.column_stack((
+    #     x[points[0]], 
+    #     y[points[1]], 
+    #     z[points[2]]
+    # ))
+    # back_projected    = transform_points_from_C0(empty_coordinates ,ptc_pt,constriction_pt)
 
-    mesh_path = "alpha_shape_watertight.ply"
+    mesh_path = "./data/{}/alpha_shape_watertight_{}.ply".format(RCSB_ID, RCSB_ID)
     mesh      = pv.read(mesh_path)
+    diagnostics = verify_mesh_quality(mesh)
+    pprint(diagnostics)
+    visualize_mesh(mesh)
+    exit()
     select    = pv.PolyData( back_projected ).select_enclosed_points(mesh)
     mask      = select['SelectedPoints']
     interior  = back_projected[mask == 1]
@@ -233,19 +277,5 @@ def main():
         recon_pt_weight=PR_ptweight,
     )
 
-# TODO: Hook up Wenjun's code
-# mesh_path      = "alpha_shape_watertight.ply"
-# mesh           = pv.read(mesh_path)
-def  clip_pcd_via_ashape(pcd: np.ndarray, mesh: pv.PolyData) -> Tuple[np.ndarray, np.ndarray]:
     
-    points_poly = pv.PolyData(pcd)
-    select = points_poly.select_enclosed_points(mesh)
-    mask = select['SelectedPoints']
-    ashape_interior = pcd[mask == 1]
-    ashape_exterior = pcd[mask == 0]
-    return ashape_interior, ashape_exterior
-    
-
-if __name__ == '__main__':
-    main()
 

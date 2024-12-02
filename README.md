@@ -2,6 +2,11 @@
 
 This is a satelite repo for the paper [Advanced coarse-grained model of the ribosome exit tunnel for fast simulation of the nascent polypeptide chain dynamics](#citation_url).
 
+## Installation
+
+Note: `python3.11` is the latest version that is supported (this is solely due to `open3d` dep.) 
+
+
 
 
 ### Layout prototype during development:

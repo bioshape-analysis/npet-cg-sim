@@ -9,20 +9,12 @@ import json
 import os
 import numpy as np
 import numpy as np
-from mesh_generation.mesh_bbox_extraction import (
-    encode_atoms,
-    open_tunnel_csv,
-    parse_struct_via_bbox,
-    parse_struct_via_centerline,
-)
 from compas.geometry import bounding_box
 import plyfile
 import warnings
 warnings.filterwarnings("ignore")
 
-#TODO
 POISSON_RECON_BIN = "kazhdan_binary"
-
 def apply_poisson_reconstruction(surf_estimated_ptcloud_path: str, output_path: str, recon_depth:int=6, recon_pt_weight:int=3):
     # The documentation can be found at https://www.cs.jhu.edu/~misha/Code/PoissonRecon/Version16.04/ in "PoissonRecon" binary
     command = [
