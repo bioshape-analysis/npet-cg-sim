@@ -1136,6 +1136,162 @@ def visualize_pointcloud(ptcloud,  rcsb_id:str|None=None, gif:bool=False, gif_na
     plotter.add_points(pv.PolyData(ptcloud), color='black', point_size=3,  opacity=0.3)
     plotter.show()
 
+def visualize_pointcloud_axis(ptcloud,aux_ptcloud, base_point, axis_point, radius=0.1, height=None, rcsb_id:str|None=None, gif:bool=False, gif_name:str|None=None):
+    """
+    Visualize a point cloud oriented along a specified axis, with base/axis points and cylinder.
+    
+    Parameters:
+    -----------
+    ptcloud : numpy.ndarray
+        The input point cloud coordinates
+    base_point : numpy.ndarray
+        The point defining the base of the axis
+    axis_point : numpy.ndarray
+        The point defining the tip of the axis
+    radius : float, optional
+        Radius of the cylinder (default 0.1)
+    height : float, optional
+        Height of the cylinder (default: distance between base and axis points)
+    rcsb_id : str, optional
+        Identifier for the point cloud
+    gif : bool, default False
+        Whether to create an off-screen render for GIF
+    gif_name : str, optional
+        Name of the output GIF file
+    """
+    # Convert inputs to numpy arrays to ensure compatibility
+    base_point = np.asarray(base_point)
+    axis_point = np.asarray(axis_point)
+    ptcloud = np.asarray(ptcloud)
+    
+    # Calculate the original axis vector
+    original_axis = axis_point - base_point
+    original_axis_length = np.linalg.norm(original_axis)
+    original_axis = original_axis / original_axis_length
+    
+    # Set height to axis length if not specified
+    if height is None:
+        height = original_axis_length
+    
+    # Define the target z-axis (pointing down)
+    target_z_axis = np.array([0, 0, -1])
+    
+    # Calculate the rotation matrix to align the original axis with the z-axis
+    rotation_axis = np.cross(original_axis, target_z_axis)
+    
+    # Calculate the angle between the vectors
+    angle = np.arccos(np.dot(original_axis, target_z_axis))
+    
+    # Create rotation matrix using Rodrigues' rotation formula
+    if np.linalg.norm(rotation_axis) > 1e-10:
+        rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+        K = np.array([
+            [0, -rotation_axis[2], rotation_axis[1]],
+            [rotation_axis[2], 0, -rotation_axis[0]],
+            [-rotation_axis[1], rotation_axis[0], 0]
+        ])
+        R = (np.eye(3) + np.sin(angle) * K + 
+             (1 - np.cos(angle)) * np.dot(K, K))
+    else:
+        # If the vectors are already aligned, use identity matrix
+        R = np.eye(3)
+    
+    # Transform the point cloud
+    transformed_ptcloud = np.dot(ptcloud - base_point, R.T)
+    transformed_aux_pts = np.dot(aux_ptcloud - base_point, R.T)
+    
+    # Transform the base and axis points
+    transformed_base_point = np.dot(base_point - base_point, R.T)
+    transformed_axis_point = np.dot(axis_point - base_point, R.T)
+    
+    # Create the plotter
+    plotter = pv.Plotter()
+    
+    # Add visualization elements
+    n_labels = 7
+    # plotter.show_grid(n_xlabels=n_labels, n_ylabels=n_labels, n_zlabels=n_labels, font_size=8)
+    # plotter.add_axes(line_width=2, cone_radius=0.3, shaft_length=2, tip_length=1, ambient=1, label_size=(0.2, 0.6))
+    
+    # # Add RCSB ID text
+    # plotter.add_text(f'RCSB_ID:{rcsb_id if rcsb_id is not None else ""}', 
+    #                  position='upper_right', font_size=14, 
+    #                  shadow=True, font='courier', color='black')
+    
+    # Create and add transformed cylinder
+    cylinder = pv.Cylinder(
+        center=transformed_base_point + (height/2) * np.array([0, 0, -1]),
+        direction=[0, 0, -1],
+        radius=radius,
+        height=height,
+        resolution=30
+    ).triangulate()
+    
+    # Add cylinder with visible edges
+    # plotter.add_mesh(cylinder, color='blue', opacity=0.3, show_edges=True, edge_color='black')
+
+    plotter.add_mesh(
+        cylinder, 
+        style='surface', 
+        color='green', 
+        # show_edges=True,
+        opacity=0.1,
+        # silhouette=True
+    )
+
+    plotter.add_points(transformed_base_point, color='red', point_size=8, render_points_as_spheres=True)
+    plotter.add_points(transformed_axis_point, color='red', point_size=8, render_points_as_spheres=True)
+    
+    # Add transformed points (very faint)
+    plotter.add_points(pv.PolyData(transformed_ptcloud), style='points_gaussian', color='gray', point_size=1, opacity=0.1)
+    plotter.add_points(pv.PolyData(transformed_aux_pts), style='points', color='blue', point_size=2, opacity=0.3)
+    
+    # Show the plot
+    plotter.show()
+    
+    camera_position = plotter.camera_position
+    camera_focal_point = plotter.camera_focal_point
+    camera_viewup = plotter.camera_viewup
+
+    # Then in a separate render
+    plotter_render = pv.Plotter(off_screen=True)
+    plotter_render.add_mesh(your_data)
+    plotter_render.camera_position = camera_position
+    plotter_render.camera_focal_point = camera_focal_point
+    plotter_render.camera_viewup = camera_viewup
+    plotter_render.show(screenshot='output.png')
+    
+    return transformed_ptcloud
+
+def create_cylinder_from_points(base_point, axis_point, radius, height):
+    """
+    Create a cylinder using two points: a base point and a point defining the axis direction.
+    
+    Parameters:
+    base_point: array-like, [x, y, z] starting point of cylinder
+    axis_point: array-like, [x, y, z] point defining cylinder axis direction
+    radius: float, radius of cylinder
+    height: float, total height of cylinder (can extend past axis_point)
+    
+    Returns:
+    cylinder: PyVista cylinder mesh (triangulated)
+    direction: numpy array of normalized direction vector
+    """
+    base_point = np.array(base_point)
+    axis_point = np.array(axis_point)
+    
+    direction = axis_point - base_point
+    direction = direction / np.linalg.norm(direction)
+    
+    cylinder = pv.Cylinder(
+        center=base_point + (height/2) * direction,
+        direction=direction,
+        radius=radius,
+        height=height,
+        resolution=30
+    ).triangulate()
+    
+    return cylinder, direction
+
 def visualize_pointclouds(ptcloud1:np.ndarray, ptcloud2:np.ndarray, background_positive:np.ndarray, gif:bool=False, gif_name:str|None=None):
     plotter               = pv.Plotter(shape=(1, 2), off_screen=gif)
     plotter.subplot(0,0)

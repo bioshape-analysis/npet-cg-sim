@@ -73,7 +73,7 @@ alpha   = 0.05
 
 
 def produce_alpha_contour(RCSB_ID, alpha):
-    cif_file = "./data/{}/{}.cif".format(RCSB_ID, RCSB_ID)
+    cif_file    = "./data/{}/{}.cif".format(RCSB_ID, RCSB_ID)
     point_cloud = cif_to_point_cloud(cif_file)
     point_cloud = np.array(point_cloud)
     alpha_shape = alphashape.alphashape(point_cloud,  alpha=0.05)

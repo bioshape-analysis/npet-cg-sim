@@ -7,7 +7,7 @@ from scipy.spatial import cKDTree
 import sys
 sys.dont_write_bytecode = True
 import pyvista as pv
-from mesh_generation.mesh_visualization import visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs, visualize_mesh, visualize_pointcloud
+from mesh_generation.mesh_visualization import visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs, visualize_mesh, visualize_pointcloud, visualize_pointcloud_axis
 from mesh_generation.mesh_full_pipeline import DBSCAN_capture, DBSCAN_pick_largest_cluster
 from mesh_generation.mesh_libsurf import apply_poisson_reconstruction, estimate_normals, ptcloud_convex_hull_points
 from mesh_generation.util import landmark_constriction_site, landmark_ptc
@@ -210,9 +210,13 @@ def main():
 
     ptc_pt          = np.array(landmark_ptc(RCSB_ID))
     constriction_pt = np.array(landmark_constriction_site(RCSB_ID))
-
-    residues           = filter_residues_parallel(ribosome_entities(RCSB_ID, cifpath,'R'), ptc_pt, constriction_pt, R, H)
-    points             = np.array([atom.get_coord() for residue in residues for atom in residue.child_list])
+    residues           = filter_residues_parallel(ribosome_entities(RCSB_ID, cifpath,'A'), ptc_pt, constriction_pt, R, H)
+    atom_points = np.array([atom.get_coord() for atom in residues])
+    # points             = np.array([atom.get_coord() for residue in residues for atom in residue.child_list])
+    allatoms=np.array([atom.coord for atom in ribosome_entities(RCSB_ID, cifpath,'A')])
+    # visualize_pointcloud(allatoms)
+    visualize_pointcloud_axis(allatoms,atom_points, ptc_pt, constriction_pt, R, H)
+    exit()
     transformed_points = transform_points_to_C0(points, ptc_pt, constriction_pt)
 
     mask, (x, y, z) = create_point_cloud_mask(

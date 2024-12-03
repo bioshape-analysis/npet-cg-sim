@@ -3,7 +3,9 @@ from alpha_shape.lib import produce_alpha_contour
 from mesh_generation.kdtree_approach import main
 import sys
 sys.dont_write_bytecode = True
+import dotenv
 
+dotenv.load_dotenv('.example-env')
 @click.group()
 def cli():
     """Ribosome nascent peptide exit tunnel (NPET) extraction and simulation cli. See repo documentation and paper for more info."""
