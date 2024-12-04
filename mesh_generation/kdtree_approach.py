@@ -1,5 +1,8 @@
+import pickle
+from Bio.PDB import Residue
 from pprint import pprint
 from typing import Tuple
+import json
 import open3d as o3d
 import numpy as np
 from mesh_generation.tunnel_bbox_ptc_constriction import filter_residues_parallel, ribosome_entities
@@ -7,7 +10,7 @@ from scipy.spatial import cKDTree
 import sys
 sys.dont_write_bytecode = True
 import pyvista as pv
-from mesh_generation.mesh_visualization import visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs, visualize_mesh, visualize_pointcloud, visualize_pointcloud_axis
+from mesh_generation.mesh_visualization import visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs, visualize_mesh, visualize_pointcloud, visualize_pointcloud_axis, visualize_pointcloud_axis_o3d
 from mesh_generation.mesh_full_pipeline import DBSCAN_capture, DBSCAN_pick_largest_cluster
 from mesh_generation.mesh_libsurf import apply_poisson_reconstruction, estimate_normals, ptcloud_convex_hull_points
 from mesh_generation.util import landmark_constriction_site, landmark_ptc
@@ -208,14 +211,46 @@ def main():
     Vsize     = 1
     ATOM_SIZE = 2
 
+    # # All atoms
+    # ptc_pt          = np.array(landmark_ptc(RCSB_ID))
+    # constriction_pt = np.array(landmark_constriction_site(RCSB_ID))
+    # residues           = filter_residues_parallel(ribosome_entities(RCSB_ID, cifpath,'A'), ptc_pt, constriction_pt, R, H)
+    # atom_points = np.array([atom.get_coord() for atom in residues])
+    # # points             = np.array([atom.get_coord() for residue in residues for atom in residue.child_list])
+    # allatoms=np.array([atom.coord for atom in ribosome_entities(RCSB_ID, cifpath,'A')])
+    # # visualize_pointcloud(allatoms)
+    # visualize_pointcloud_axis(allatoms,atom_points, ptc_pt, constriction_pt, R, H)
+    # # visualize_pointcloud_axis_o3d(allatoms,atom_points, ptc_pt, constriction_pt, R, H)
+    # All residues
     ptc_pt          = np.array(landmark_ptc(RCSB_ID))
     constriction_pt = np.array(landmark_constriction_site(RCSB_ID))
-    residues           = filter_residues_parallel(ribosome_entities(RCSB_ID, cifpath,'A'), ptc_pt, constriction_pt, R, H)
-    atom_points = np.array([atom.get_coord() for atom in residues])
-    # points             = np.array([atom.get_coord() for residue in residues for atom in residue.child_list])
-    allatoms=np.array([atom.coord for atom in ribosome_entities(RCSB_ID, cifpath,'A')])
-    # visualize_pointcloud(allatoms)
-    visualize_pointcloud_axis(allatoms,atom_points, ptc_pt, constriction_pt, R, H)
+
+    entities =  ribosome_entities(RCSB_ID, cifpath,'R')
+    residues           = filter_residues_parallel(entities, ptc_pt, constriction_pt, R, H)
+    
+    chain_res_map = {} 
+    for residue in residues:
+        (_,_,aaid, (_,asid,_))= residue.full_id
+        if aaid not in chain_res_map:
+            chain_res_map[aaid] = []
+            chain_res_map[aaid].append(asid)
+        else :
+            chain_res_map[aaid].append(asid)
+
+
+    with open('cylinder_residues.json', 'w', encoding='utf-8') as f:
+        json.dump(chain_res_map, f, ensure_ascii=False, indent=4)
+        pprint(chain_res_map)
+        pprint("dumped")
+    
+    exit()
+    filtered_res = np.array([residue.center_of_mass() for residue in residues])
+
+
+    all_res=np.array([residue.center_of_mass() for residue in entities])
+
+    visualize_pointcloud_axis(all_res,filtered_res, ptc_pt, constriction_pt, R, H)
+    # visualize_pointcloud_axis_o3d(allatoms,atom_points, ptc_pt, constriction_pt, R, H)
     exit()
     transformed_points = transform_points_to_C0(points, ptc_pt, constriction_pt)
 

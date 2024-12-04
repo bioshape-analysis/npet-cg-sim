@@ -1,10 +1,10 @@
 import pickle
 from pprint import pprint
 import typing
+import open3d as o3d
 from matplotlib import pyplot as plt
 import pyvista as pv
 import json
-import numpy as np
 import numpy as np
 
 hexcolors = {
@@ -993,7 +993,6 @@ dbscan_pairs = [
     (5.5,600)
 ]
 
-
 def visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs( dbscan_cluster_dict: dict[int, list], eps, min_nbrs, gif:bool=False, gif_name:str|None=None):
     plotter               = pv.Plotter(off_screen=gif)
     y_offset= 0.95
@@ -1103,7 +1102,6 @@ def DBSCAN_CLUSTERS_visualize_largest(positive_space: np.ndarray, dbscan_cluster
     else:
         plotter.show()
 
-
 def visualize_mesh(mesh_path, rcsb_id:str|None=None, gif:bool=False, gif_name:str|None=None):
     plotter = pv.Plotter(off_screen=gif)
 
@@ -1137,28 +1135,6 @@ def visualize_pointcloud(ptcloud,  rcsb_id:str|None=None, gif:bool=False, gif_na
     plotter.show()
 
 def visualize_pointcloud_axis(ptcloud,aux_ptcloud, base_point, axis_point, radius=0.1, height=None, rcsb_id:str|None=None, gif:bool=False, gif_name:str|None=None):
-    """
-    Visualize a point cloud oriented along a specified axis, with base/axis points and cylinder.
-    
-    Parameters:
-    -----------
-    ptcloud : numpy.ndarray
-        The input point cloud coordinates
-    base_point : numpy.ndarray
-        The point defining the base of the axis
-    axis_point : numpy.ndarray
-        The point defining the tip of the axis
-    radius : float, optional
-        Radius of the cylinder (default 0.1)
-    height : float, optional
-        Height of the cylinder (default: distance between base and axis points)
-    rcsb_id : str, optional
-        Identifier for the point cloud
-    gif : bool, default False
-        Whether to create an off-screen render for GIF
-    gif_name : str, optional
-        Name of the output GIF file
-    """
     # Convert inputs to numpy arrays to ensure compatibility
     base_point = np.asarray(base_point)
     axis_point = np.asarray(axis_point)
@@ -1223,44 +1199,165 @@ def visualize_pointcloud_axis(ptcloud,aux_ptcloud, base_point, axis_point, radiu
         direction=[0, 0, -1],
         radius=radius,
         height=height,
-        resolution=30
+        resolution=50
     ).triangulate()
     
     # Add cylinder with visible edges
     # plotter.add_mesh(cylinder, color='blue', opacity=0.3, show_edges=True, edge_color='black')
 
-    plotter.add_mesh(
-        cylinder, 
-        style='surface', 
-        color='green', 
-        # show_edges=True,
-        opacity=0.1,
-        # silhouette=True
-    )
-
-    plotter.add_points(transformed_base_point, color='red', point_size=8, render_points_as_spheres=True)
-    plotter.add_points(transformed_axis_point, color='red', point_size=8, render_points_as_spheres=True)
+    plotter.add_mesh( cylinder, style='surface', line_width=3, show_edges=True, opacity=0.05, color='lightgreen', silhouette=True )
+    plotter.add_points(transformed_base_point, color='red', point_size=12, render_points_as_spheres=True)
+    plotter.add_points(transformed_axis_point, color='red', point_size=12, render_points_as_spheres=True)
+    plotter.add_points(pv.PolyData(transformed_ptcloud), render_points_as_spheres=True,  style='points', point_size=3, opacity=0.4)
+    plotter.add_points(pv.PolyData(transformed_aux_pts), render_points_as_spheres=True,  style='points', color='blue', point_size=5, opacity=0.8)
     
-    # Add transformed points (very faint)
-    plotter.add_points(pv.PolyData(transformed_ptcloud), style='points_gaussian', color='gray', point_size=1, opacity=0.1)
-    plotter.add_points(pv.PolyData(transformed_aux_pts), style='points', color='blue', point_size=2, opacity=0.3)
-    
-    # Show the plot
+    # Show the plotr
     plotter.show()
     
     camera_position = plotter.camera_position
-    camera_focal_point = plotter.camera_focal_point
-    camera_viewup = plotter.camera_viewup
+    # camera_focal_point = plotter.camera_focal_point
+    # camera_viewup = plotter.camera_viewup
 
     # Then in a separate render
     plotter_render = pv.Plotter(off_screen=True)
-    plotter_render.add_mesh(your_data)
+    plotter_render.add_mesh( cylinder, style='surface', line_width=3, show_edges=True, opacity=0.05, color='lightgreen', silhouette=True )
+    plotter_render.add_points(transformed_base_point, color='red', point_size=12, render_points_as_spheres=True)
+    plotter_render.add_points(transformed_axis_point, color='red', point_size=12, render_points_as_spheres=True)
+    plotter_render.add_points(pv.PolyData(transformed_ptcloud), render_points_as_spheres=True,  style='points', point_size=3, opacity=0.4)
+    plotter_render.add_points(pv.PolyData(transformed_aux_pts), render_points_as_spheres=True,  style='points', color='blue', point_size=5, opacity=0.8)
+    
     plotter_render.camera_position = camera_position
-    plotter_render.camera_focal_point = camera_focal_point
-    plotter_render.camera_viewup = camera_viewup
-    plotter_render.show(screenshot='output.png')
+    plotter_render.screenshot('4ug0_ptcloud.png', transparent_background=True, window_size=(1920,1280))
     
     return transformed_ptcloud
+
+import numpy as np
+import open3d as o3d
+
+def visualize_pointcloud_axis_o3d(ptcloud, aux_ptcloud, base_point, axis_point, radius=0.1, height=None, rcsb_id:str|None=None, gif:bool=False, gif_name:str|None=None):
+    """
+    Visualize a point cloud oriented along a specified axis, with base/axis points and cylinder.
+    
+    Parameters:
+    -----------
+    ptcloud : numpy.ndarray
+        The input point cloud coordinates
+    base_point : numpy.ndarray
+        The point defining the base of the axis
+    axis_point : numpy.ndarray
+        The point defining the tip of the axis
+    radius : float, optional
+        Radius of the cylinder (default 0.1)
+    height : float, optional
+        Height of the cylinder (default: distance between base and axis points)
+    rcsb_id : str, optional
+        Identifier for the point cloud
+    gif : bool, default False
+        Whether to create an off-screen render for GIF
+    gif_name : str, optional
+        Name of the output GIF file
+    """
+    # Convert inputs to numpy arrays to ensure compatibility
+    base_point = np.asarray(base_point)
+    axis_point = np.asarray(axis_point)
+    ptcloud = np.asarray(ptcloud)
+    aux_ptcloud = np.asarray(aux_ptcloud)
+    
+    # Calculate the original axis vector
+    original_axis = axis_point - base_point
+    original_axis_length = np.linalg.norm(original_axis)
+    original_axis = original_axis / original_axis_length
+    
+    # Set height to axis length if not specified
+    if height is None:
+        height = original_axis_length
+    
+    # Define the target z-axis (pointing down)
+    target_z_axis = np.array([0, 0, -1])
+    
+    # Calculate the rotation matrix to align the original axis with the z-axis
+    rotation_axis = np.cross(original_axis, target_z_axis)
+    angle = np.arccos(np.dot(original_axis, target_z_axis))
+    if np.linalg.norm(rotation_axis) > 1e-10:
+        rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+        R = o3d.geometry.get_rotation_matrix_from_axis_angle(angle * rotation_axis)
+    else:
+        # If the vectors are already aligned, use identity matrix
+        R = np.eye(3)
+    
+    # Transform the point cloud
+    transformed_ptcloud = np.dot(ptcloud - base_point, R.T)
+    transformed_aux_pts = np.dot(aux_ptcloud - base_point, R.T)
+    
+    # Transform the base and axis points
+    transformed_base_point = np.dot(base_point - base_point, R.T)
+    transformed_axis_point = np.dot(axis_point - base_point, R.T)
+    
+    # Create the Open3D visualization
+    vis = o3d.visualization.Visualizer()
+    vis.create_window()
+    
+    # Create the point cloud
+    mat1 = o3d.visualization.rendering.MaterialRecord()
+    mat1.shader = 'defaultLitTransparency'
+    mat1.base_color = [0.0, 0.6, 1.0, 0.5]  # Transparent blue
+    # mat1.roughness = 0.8  # Matte finish
+    
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(transformed_ptcloud)
+    pcd.colors = o3d.utility.Vector3dVector([ (0.8, 0.8, 0.8) for _ in range(len(transformed_ptcloud)) ])
+    
+    # Create the auxiliary point cloud
+    mat2 = o3d.visualization.rendering.MaterialRecord()
+    mat2.shader = 'defaultLitTransparency'
+    mat2.base_color = [0.0, 1.0, 0.0, 0.8]  # Semi-transparent green
+    # mat2.roughness = 0.5  # Slight gloss
+    
+    aux_pcd = o3d.geometry.PointCloud()
+    aux_pcd.points = o3d.utility.Vector3dVector(transformed_aux_pts)
+    aux_pcd.colors = o3d.utility.Vector3dVector([ (0, 0, 1) for _ in range(len(transformed_aux_pts)) ])
+    
+    # Create the cylinder
+    cylinder = o3d.geometry.TriangleMesh.create_cylinder( radius=radius, height=height )
+    cylinder.compute_vertex_normals()
+    cylinder.translate(transformed_base_point + (height/2) * np.array([0, 0, -1]))
+    cylinder.rotate(R, center=transformed_base_point)
+    cylinder.paint_uniform_color([0, 1, 0])
+    
+    mat3 = o3d.visualization.rendering.MaterialRecord()
+    mat3.shader = 'defaultLit'
+    mat3.base_color = [0, 1, 0, 0.3]  # Semi-transparent green
+    # mat3.roughness = 0.5  # Slight gloss
+    # mat3.edge_color = [0, 0, 0, 1]  # Black outline
+    
+    # cylinder.materials = [mat3]
+    
+    # Create the base and axis points
+    base_sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.02)
+    base_sphere.paint_uniform_color([1, 0, 0])
+    base_sphere.translate(transformed_base_point)
+    
+    axis_sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.02)
+    axis_sphere.paint_uniform_color([1, 0, 0])
+    axis_sphere.translate(transformed_axis_point)
+    
+    # Add the elements to the visualization
+    vis.add_geometry(pcd, mat1)
+    vis.add_geometry(aux_pcd, mat2)
+    vis.add_geometry(cylinder, mat3)
+    vis.add_geometry(base_sphere)
+    vis.add_geometry(axis_sphere)
+    
+    # Adjust the camera settings
+    ctr = vis.get_view_control()
+    ctr.set_front([0, 0, -1])
+    ctr.set_up([0, 1, 0])
+    ctr.set_zoom(1.0)
+    
+    # Render the scene
+    vis.run()
+    vis.destroy_window()
+
 
 def create_cylinder_from_points(base_point, axis_point, radius, height):
     """

@@ -134,10 +134,10 @@ def make_cylinder_predicate(
         return is_point_in_cylinder(position, base_point, axis_point, radius, height)
     return predicate
 
-# def get_residue_position(residue):
-#     return residue.center_of_mass()
 def get_residue_position(residue):
-    return residue.get_coord()
+    return residue.center_of_mass()
+# def get_residue_position(residue):
+#     return residue.get_coord()
 
 def _worker_process_chunk(chunk_data):
     """
