@@ -993,46 +993,156 @@ dbscan_pairs = [
     (5.5,600)
 ]
 
-def visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs( dbscan_cluster_dict: dict[int, list], eps, min_nbrs, gif:bool=False, gif_name:str|None=None):
-    plotter               = pv.Plotter(off_screen=gif)
-    y_offset= 0.95
-    plotter.subplot(0,0)
-    for k, v in dbscan_cluster_dict.items():
-        print("Cluster {} has {} points.".format(k, len(v)))
 
+def visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs(dbscan_cluster_dict: dict[int, list], eps, min_nbrs, base_point, axis_point, refined, radius, height):
+    plotter = pv.Plotter()
+    plotter.subplot(0, 0)
+
+    # Print cluster sizes
+    cluster_sizes = {k: len(v) for k, v in dbscan_cluster_dict.items()}
+    for k, v in cluster_sizes.items():
+        print(f"Cluster {k} has {v} points.")
+
+    # Find the largest non-noise cluster
+    largest_cluster = max(
+        ((k, len(v)) for k, v in dbscan_cluster_dict.items() if k != -1),
+        key=lambda x: x[1]
+    )[0]
+
+    # Generate color palette for regular clusters
     clusters_palette = dict(zip(range(-1, 60), plt.cm.terrain(np.linspace(0, 1, 60))))
     for k, v in clusters_palette.items():
         clusters_palette[k] = [*v[:3], 0.5]
 
-    combined_cluster_colors = []
-    combined_cluster_points = []
+    # Create cylinder
+    # Calculate direction vector from base_point to axis_point
+    direction = np.array(axis_point) - np.array(base_point)
+    direction = direction / np.linalg.norm(direction)  # Normalize
+    
+    # Create cylinder centered at base_point
+    cylinder = pv.Cylinder(
+        center=axis_point,
+        direction=-direction,
+        radius=radius,
+        height=height
+    )
+    
+    # Add cylinder to plot with transparency
+    plotter.add_mesh(cylinder, opacity=0.1, color='gray', label='Cylinder', style='wireframe')
 
-    for i,( dbscan_label, coordinates ) in enumerate( dbscan_cluster_dict.items() ):
-        combined_cluster_points.extend(coordinates)
-        combined_cluster_colors.extend( [clusters_palette[( dbscan_label * 2 )%len(clusters_palette)]   if dbscan_label != -1 else [0, 0, 0, 0.1]] * len(coordinates) )
-        color = clusters_palette[( dbscan_label * 5 )%len(clusters_palette)]   if dbscan_label != -1 else [0, 0, 0, 0.1]
-        plotter.add_text(f"Cluster {dbscan_label}: {len(coordinates)} points", position=[10, i*20], font_size=10, color=color, font=FONT)
+    # Add each cluster separately
+    for cluster_label, coordinates in dbscan_cluster_dict.items():
+        points = np.array(coordinates)
+        if cluster_label == -1:
+            # Noise points
+            ...
+            # plotter.add_points(
+            #     points,
+            #     color=[0, 0, 0],
+            #     opacity=0.03,
+            #     point_size=1,
+            #     label='Noise',
+            #     style='points_gaussian',
+            #     emissive=True
+            # )
+        elif cluster_label == largest_cluster:
+            # Largest cluster - blue spheres
+            print(points.shape)
+            plotter.add_points(
+                points,
+                color='cyan',
+                point_size=5,
+                opacity=0.15,
+                label=f'Cluster {cluster_label} (Largest)',
+                style='points',
+                render_points_as_spheres=True
+            )
+        else:
+            # Regular clusters
+            color = clusters_palette[(cluster_label * 2) % len(clusters_palette)]
+            plotter.add_points(
+                points,
+                # color=color[:3],
+                color='gray',
+                opacity=0.3,
+                point_size=2,
+                label=f'Cluster {cluster_label}',
+                style='points'
+            )
 
-    ptcloud_all_clusters         = pv.PolyData(combined_cluster_points)
-    ptcloud_all_clusters["rgba"] = combined_cluster_colors
+    print(refined)
+    print(refined.shape)
+    plotter.add_points(
+        refined,
+        color='blue',
+        point_size=3,
+        opacity=1,
+        label='refined_points',
+        style='points',
+        render_points_as_spheres=True
+    )
+    # Add reference points
+    plotter.add_points(
+        np.array([base_point]),
+        color='red',
+        point_size=20,
+        label='Base Point',
+        style='points',
+        render_points_as_spheres=True
+    )
+    plotter.add_points(
+        np.array([axis_point]),
+        color='red',
+        point_size=20,
+        label='Axis Point',
+        style='points',
+        render_points_as_spheres=True
+    )
 
-    plotter.add_mesh(ptcloud_all_clusters, scalars="rgba", rgb=True, show_scalar_bar=False)
-    plotter.add_text('eps: {} \nmin_nbrs: {}'.format(eps, min_nbrs), position='upper_left', font_size=20, shadow=True, font=FONT, color='black')
+    # Add text information
+    plotter.add_text(
+        f'eps: {eps}\nmin_nbrs: {min_nbrs}',
+        position='upper_left',
+        font_size=20,
+        shadow=True,
+        font=FONT,
+        color='black'
+    )
 
+    plotter.show()
 
-    if gif:
-        output_gif = gif_name
-        # plotter.camera.zoom(1.5)
-        plotter.open_gif(output_gif)
+# def visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs( dbscan_cluster_dict: dict[int, list], eps, min_nbrs, base_point, axis_point):
+#     plotter               = pv.Plotter()
+#     y_offset= 0.95
+#     plotter.subplot(0,0)
+#     for k, v in dbscan_cluster_dict.items():
+#         print("Cluster {} has {} points.".format(k, len(v)))
 
-        # Rotate the camera 360 degrees
-        for angle in range(0, 360, 5):  # 5 degree steps
-            plotter.camera.azimuth = angle
-            plotter.write_frame()
-        plotter.close()
-        print(f"GIF saved as {output_gif}")
-    else:
-        plotter.show()
+#     clusters_palette = dict(zip(range(-1, 60), plt.cm.terrain(np.linspace(0, 1, 60))))
+#     for k, v in clusters_palette.items():
+#         clusters_palette[k] = [*v[:3], 0.5]
+
+#     combined_cluster_colors = []
+#     combined_cluster_points = []
+
+#     for i,( dbscan_label, coordinates ) in enumerate( dbscan_cluster_dict.items() ):
+#         combined_cluster_points.extend(coordinates)
+#         if dbscan_label == 1:
+#             print("Cluster 1 has {} points.".format(len(coordinates)))
+#             combined_cluster_colors.extend([[0,0,255,1]   if dbscan_label != -1 else [0, 0, 0, 0.1]] * len(coordinates) )
+#         else:
+#             combined_cluster_colors.extend([clusters_palette[( dbscan_label * 2 ) % len(clusters_palette)]   if dbscan_label != -1 else [0, 0, 0, 0.1]] * len(coordinates) )
+
+#     ptcloud_all_clusters         = pv.PolyData(combined_cluster_points)
+#     ptcloud_all_clusters["rgba"] = combined_cluster_colors
+
+#     plotter.add_mesh(ptcloud_all_clusters, scalars="rgba", rgb=True, show_scalar_bar=False)
+#     plotter.add_text('eps: {} \nmin_nbrs: {}'.format(eps, min_nbrs), position='upper_left', font_size=20, shadow=True, font=FONT, color='black')
+
+#     plotter.add_points( np.array([base_point]), color='red', point_size=10, label='Base Point', style='points', render_points_as_spheres=True )
+#     plotter.add_points( np.array([axis_point]), color='red', point_size=10, label='Axis Point', style='points', render_points_as_spheres=True )
+
+#     plotter.show()
 
 def DBSCAN_CLUSTERS_visualize_largest(positive_space: np.ndarray, dbscan_cluster_dict: dict[int, list], selected_cluster: np.ndarray, gif:bool=False, gif_name:str|None=None):
     plotter               = pv.Plotter(shape=(1, 2), off_screen=True)

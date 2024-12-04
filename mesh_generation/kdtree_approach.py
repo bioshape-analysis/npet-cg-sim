@@ -212,47 +212,12 @@ def main():
     ATOM_SIZE = 2
 
     # # All atoms
-    # ptc_pt          = np.array(landmark_ptc(RCSB_ID))
-    # constriction_pt = np.array(landmark_constriction_site(RCSB_ID))
-    # residues           = filter_residues_parallel(ribosome_entities(RCSB_ID, cifpath,'A'), ptc_pt, constriction_pt, R, H)
-    # atom_points = np.array([atom.get_coord() for atom in residues])
-    # # points             = np.array([atom.get_coord() for residue in residues for atom in residue.child_list])
-    # allatoms=np.array([atom.coord for atom in ribosome_entities(RCSB_ID, cifpath,'A')])
-    # # visualize_pointcloud(allatoms)
-    # visualize_pointcloud_axis(allatoms,atom_points, ptc_pt, constriction_pt, R, H)
-    # # visualize_pointcloud_axis_o3d(allatoms,atom_points, ptc_pt, constriction_pt, R, H)
-    # All residues
     ptc_pt          = np.array(landmark_ptc(RCSB_ID))
     constriction_pt = np.array(landmark_constriction_site(RCSB_ID))
-
-    entities =  ribosome_entities(RCSB_ID, cifpath,'R')
-    residues           = filter_residues_parallel(entities, ptc_pt, constriction_pt, R, H)
-    
-    chain_res_map = {} 
-    for residue in residues:
-        (_,_,aaid, (_,asid,_))= residue.full_id
-        if aaid not in chain_res_map:
-            chain_res_map[aaid] = []
-            chain_res_map[aaid].append(asid)
-        else :
-            chain_res_map[aaid].append(asid)
-
-
-    with open('cylinder_residues.json', 'w', encoding='utf-8') as f:
-        json.dump(chain_res_map, f, ensure_ascii=False, indent=4)
-        pprint(chain_res_map)
-        pprint("dumped")
-    
-    exit()
-    filtered_res = np.array([residue.center_of_mass() for residue in residues])
-
-
-    all_res=np.array([residue.center_of_mass() for residue in entities])
-
-    visualize_pointcloud_axis(all_res,filtered_res, ptc_pt, constriction_pt, R, H)
-    # visualize_pointcloud_axis_o3d(allatoms,atom_points, ptc_pt, constriction_pt, R, H)
-    exit()
-    transformed_points = transform_points_to_C0(points, ptc_pt, constriction_pt)
+    entities        = ribosome_entities(RCSB_ID, cifpath,'R')
+    filtered        = filter_residues_parallel(entities, ptc_pt, constriction_pt, R, H)
+    filtered_points = np.array([atom.get_coord() for residue in filtered for atom in residue.child_list])
+    transformed_points = transform_points_to_C0(filtered_points, ptc_pt, constriction_pt)
 
     mask, (x, y, z) = create_point_cloud_mask(
         transformed_points,
@@ -268,8 +233,8 @@ def main():
         y[points[1]], 
         z[points[2]]
     ))
-    back_projected    = transform_points_from_C0(empty_coordinates ,ptc_pt,constriction_pt)
 
+    back_projected    = transform_points_from_C0(empty_coordinates ,ptc_pt,constriction_pt)
     mesh_path   = "./data/{}/alpha_shape_watertight_{}.ply".format(RCSB_ID, RCSB_ID)
     normals_pcd = "{}.normal_estimated_pcd.ply".format(RCSB_ID)
     mesh        = pv.read(mesh_path)
@@ -294,11 +259,14 @@ def main():
 
     db, clusters_container = DBSCAN_capture(empty_in_world_coords , _u_EPSILON_initial_pass, _u_MIN_SAMPLES_initial_pass)
     #! [ Extract the largest cluster from the DBSCAN clustering ]
-    visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs( clusters_container, _u_EPSILON_initial_pass, _u_MIN_SAMPLES_initial_pass)
     largest_cluster = DBSCAN_pick_largest_cluster(clusters_container)
+    # visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs( clusters_container, _u_EPSILON_initial_pass, _u_MIN_SAMPLES_initial_pass, ptc_pt, constriction_pt, np.array([[1,1,1]]))
+    # exit()
     db, clusters_refinement = DBSCAN_capture(largest_cluster , _u_EPSILON_refinement, _u_MIN_SAMPLES_refinement)
     refined = DBSCAN_pick_largest_cluster(clusters_refinement)
+    visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs( clusters_container, _u_EPSILON_initial_pass, _u_MIN_SAMPLES_initial_pass, ptc_pt, constriction_pt, refined, R, H)
 
+    exit()
 
     #! [ Transform the cluster back into original coordinate frame ]
     surface_pts = ptcloud_convex_hull_points( refined, d3d_alpha, d3d_tol )
