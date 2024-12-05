@@ -1035,16 +1035,17 @@ def visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs(dbscan_cluster_dict: dict[i
         points = np.array(coordinates)
         if cluster_label == -1:
             # Noise points
-            ...
-            # plotter.add_points(
-            #     points,
-            #     color=[0, 0, 0],
-            #     opacity=0.03,
-            #     point_size=1,
-            #     label='Noise',
-            #     style='points_gaussian',
-            #     emissive=True
-            # )
+            # ...
+            plotter.add_points(
+                points,
+                color      = 'gray',
+                opacity    = 0.1,
+                point_size = 1,
+                label      = 'Noise',
+                style      = 'points_gaussian',
+                emissive   = True
+            )
+
         elif cluster_label == largest_cluster:
             # Largest cluster - blue spheres
             print(points.shape)
