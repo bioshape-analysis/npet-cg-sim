@@ -55,6 +55,6 @@ def convert_lammps_to_pdb(input_file, output_file):
     write_pdb(atoms, box_bounds, output_file)
 
 if __name__ == "__main__":
-    input_file = "sphere.lammpstrj"
-    output_file = "output_sphere.pdb"           # Replace with desired output file name
+    input_file = "tunnel.lammpstrj"
+    output_file = "output_tunnel.pdb"           # Replace with desired output file name
     convert_lammps_to_pdb(input_file, output_file)
