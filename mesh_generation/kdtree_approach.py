@@ -266,8 +266,6 @@ def main():
     refined = DBSCAN_pick_largest_cluster(clusters_refinement)
     visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs( clusters_container, _u_EPSILON_initial_pass, _u_MIN_SAMPLES_initial_pass, ptc_pt, constriction_pt, refined, R, H)
 
-    exit()
-
     #! [ Transform the cluster back into original coordinate frame ]
     surface_pts = ptcloud_convex_hull_points( refined, d3d_alpha, d3d_tol )
     visualize_pointcloud( surface_pts, RCSB_ID)
@@ -280,15 +278,14 @@ def main():
         correction_tangent_planes_n = 10,
     )
     o3d.io.write_point_cloud(normals_pcd, normal_estimated_pcd)
-    
     apply_poisson_reconstruction(
         normals_pcd,
-        "{}.poisson_recon.ply".format(RCSB_ID),
+        "{}.PR.watertight.ply".format(RCSB_ID),
         recon_depth=PR_depth,
         recon_pt_weight=PR_ptweight,
     )
     
-    visualize_mesh( "{}.poisson_recon.ply".format(RCSB_ID) )
+    visualize_mesh("{}.PR.watertight.ply".format(RCSB_ID) )
 
     
 

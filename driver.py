@@ -5,7 +5,7 @@ import sys
 sys.dont_write_bytecode = True
 import dotenv
 
-dotenv.load_dotenv('.example-env')
+dotenv.load_dotenv('.env')
 @click.group()
 def cli():
     """Ribosome nascent peptide exit tunnel (NPET) extraction and simulation cli. See repo documentation and paper for more info."""
