@@ -1,9 +1,5 @@
 import os
-import pickle
-from Bio.PDB import Residue
-from pprint import pprint
 from typing import Tuple
-import json
 import open3d as o3d
 import numpy as np
 from data.asset_manager import StructureAssets
@@ -13,6 +9,7 @@ from mesh_generation.tunnel_bbox_ptc_constriction import (
 )
 from scipy.spatial import cKDTree
 import sys
+data_dir = os.getenv('DATA_DIR')
 
 sys.dont_write_bytecode = True
 import pyvista as pv
@@ -254,9 +251,9 @@ def clip_pcd_via_ashape(
     ashape_exterior = pcd[mask == 0]
     return ashape_interior, ashape_exterior
 
-data_dir = os.getenv('DATA_DIR')
 def create_tunnel_mesh(RCSB_ID:str):
-    cifpath   = StructureAssets(data_dir, RCSB_ID).cif_struct
+    assets = StructureAssets(data_dir, RCSB_ID)
+    cifpath   = assets.cif_struct
     R         = 40
     H         = 100
     Vsize     = 1
@@ -268,9 +265,7 @@ def create_tunnel_mesh(RCSB_ID:str):
     entities        = ribosome_entities(RCSB_ID, cifpath, "R")
     filtered        = filter_residues_parallel(entities, ptc_pt, constriction_pt, R, H)
     filtered_points = np.array( [atom.get_coord() for residue in filtered for atom in residue.child_list] )
-    transformed_points = transform_points_to_C0(
-        filtered_points, ptc_pt, constriction_pt
-    )
+    transformed_points = transform_points_to_C0( filtered_points, ptc_pt, constriction_pt )
 
     mask, (x, y, z) = create_point_cloud_mask(
         transformed_points,
@@ -286,24 +281,26 @@ def create_tunnel_mesh(RCSB_ID:str):
     back_projected = transform_points_from_C0(
         empty_coordinates, ptc_pt, constriction_pt
     )
-    mesh_path = "./data/{}/alpha_shape_watertight_{}.ply".format(RCSB_ID, RCSB_ID)
-    normals_pcd = "{}.normal_estimated_pcd.ply".format(RCSB_ID)
-    mesh = pv.read(mesh_path)
-    diagnostics = verify_mesh_quality(mesh)
-    select = pv.PolyData(back_projected).select_enclosed_points(mesh)
-    mask = select["SelectedPoints"]
-    interior = back_projected[mask == 1]
 
+
+
+    # diagnostics            = verify_mesh_quality(ashape_watertight_mesh)
+
+    normals_pcd_path       = assets.tunnel_pcd_normal_estimated
+    ashape_watertight_mesh = pv.read(assets.ashape_watertight)
+    select                 = pv.PolyData(back_projected).select_enclosed_points(ashape_watertight_mesh)
+    mask                   = select["SelectedPoints"]
+    interior               = back_projected[mask == 1]
     empty_in_world_coords = np.array(interior)
 
-    _u_EPSILON_initial_pass = 5.5
+    _u_EPSILON_initial_pass     = 5.5
     _u_MIN_SAMPLES_initial_pass = 600
-    _u_EPSILON_refinement = 3.5
-    _u_MIN_SAMPLES_refinement = 175
+    _u_EPSILON_refinement       = 3.5
+    _u_MIN_SAMPLES_refinement   = 175
 
-    d3d_alpha = 2
-    d3d_tol = 1
-    PR_depth = 6
+    d3d_alpha   = 2
+    d3d_tol     = 1
+    PR_depth    = 6
     PR_ptweight = 3
 
     db, clusters_container = DBSCAN_capture(
@@ -339,12 +336,12 @@ def create_tunnel_mesh(RCSB_ID:str):
         kdtree_max_nn=15,
         correction_tangent_planes_n=10,
     )
-    o3d.io.write_point_cloud(normals_pcd, normal_estimated_pcd)
+    o3d.io.write_point_cloud(normals_pcd_path, normal_estimated_pcd)
     apply_poisson_reconstruction(
-        normals_pcd,
-        "{}.PR.watertight.ply".format(RCSB_ID),
+        normals_pcd_path,
+        assets.tunnel_mesh,
         recon_depth=PR_depth,
         recon_pt_weight=PR_ptweight,
     )
 
-    visualize_mesh("{}.PR.watertight.ply".format(RCSB_ID))
+    visualize_mesh(assets.tunnel_mesh)

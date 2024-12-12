@@ -14,13 +14,18 @@ class StructureAssets():
         self.structpath = os.path.join(data_dir, rcsb_id.upper())
         pass
 
-    @property
-    def ashape_watertight(self):
-        return os.path.join(self.structpath, '{}_ashape_watertight.ply'.format(self.rcsb_id))
 
     @property
     def cif_struct(self):
         return os.path.join(self.structpath, '{}.cif'.format(self.rcsb_id))
+
+    @property
+    def tunnel_pcd_normal_estimated(self):
+        return os.path.join(self.structpath, '{}_tunnel_pcd_normal_estimated.ply'.format(self.rcsb_id))
+
+    @property
+    def ashape_watertight(self):
+        return os.path.join(self.structpath, '{}_ashape_watertight.ply'.format(self.rcsb_id))
 
     @property
     def tunnel_mesh(self):

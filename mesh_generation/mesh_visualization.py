@@ -1,11 +1,9 @@
-import pickle
 from pprint import pprint
-import typing
-import open3d as o3d
 from matplotlib import pyplot as plt
 import pyvista as pv
 import json
 import numpy as np
+import open3d as o3d
 
 hexcolors = {
     'aliceblue'           : '#F0F8FF',
@@ -1112,39 +1110,6 @@ def visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs(dbscan_cluster_dict: dict[i
 
     plotter.show()
 
-# def visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs( dbscan_cluster_dict: dict[int, list], eps, min_nbrs, base_point, axis_point):
-#     plotter               = pv.Plotter()
-#     y_offset= 0.95
-#     plotter.subplot(0,0)
-#     for k, v in dbscan_cluster_dict.items():
-#         print("Cluster {} has {} points.".format(k, len(v)))
-
-#     clusters_palette = dict(zip(range(-1, 60), plt.cm.terrain(np.linspace(0, 1, 60))))
-#     for k, v in clusters_palette.items():
-#         clusters_palette[k] = [*v[:3], 0.5]
-
-#     combined_cluster_colors = []
-#     combined_cluster_points = []
-
-#     for i,( dbscan_label, coordinates ) in enumerate( dbscan_cluster_dict.items() ):
-#         combined_cluster_points.extend(coordinates)
-#         if dbscan_label == 1:
-#             print("Cluster 1 has {} points.".format(len(coordinates)))
-#             combined_cluster_colors.extend([[0,0,255,1]   if dbscan_label != -1 else [0, 0, 0, 0.1]] * len(coordinates) )
-#         else:
-#             combined_cluster_colors.extend([clusters_palette[( dbscan_label * 2 ) % len(clusters_palette)]   if dbscan_label != -1 else [0, 0, 0, 0.1]] * len(coordinates) )
-
-#     ptcloud_all_clusters         = pv.PolyData(combined_cluster_points)
-#     ptcloud_all_clusters["rgba"] = combined_cluster_colors
-
-#     plotter.add_mesh(ptcloud_all_clusters, scalars="rgba", rgb=True, show_scalar_bar=False)
-#     plotter.add_text('eps: {} \nmin_nbrs: {}'.format(eps, min_nbrs), position='upper_left', font_size=20, shadow=True, font=FONT, color='black')
-
-#     plotter.add_points( np.array([base_point]), color='red', point_size=10, label='Base Point', style='points', render_points_as_spheres=True )
-#     plotter.add_points( np.array([axis_point]), color='red', point_size=10, label='Axis Point', style='points', render_points_as_spheres=True )
-
-#     plotter.show()
-
 def DBSCAN_CLUSTERS_visualize_largest(positive_space: np.ndarray, dbscan_cluster_dict: dict[int, list], selected_cluster: np.ndarray, gif:bool=False, gif_name:str|None=None):
     plotter               = pv.Plotter(shape=(1, 2), off_screen=True)
     plotter.subplot(0,0)
@@ -1342,8 +1307,6 @@ def visualize_pointcloud_axis(ptcloud,aux_ptcloud, base_point, axis_point, radiu
     
     return transformed_ptcloud
 
-import numpy as np
-import open3d as o3d
 
 def visualize_pointcloud_axis_o3d(ptcloud, aux_ptcloud, base_point, axis_point, radius=0.1, height=None, rcsb_id:str|None=None, gif:bool=False, gif_name:str|None=None):
     """
