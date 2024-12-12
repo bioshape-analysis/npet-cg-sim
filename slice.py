@@ -202,16 +202,16 @@ def verify_mesh_orientation(mesh_path: str):
 # meshpath = "4UG0.PR.watertight.ply"
 # clippedpath = "4UG0.PR.watertight-clipped.ply"
 
-RCSB_ID  = "4UG0"
-meshpath = "./data/4UG0/alpha_shape_watertight_4UG0.ply"
+RCSB_ID     = "4UG0"
+meshpath    = "./data/4UG0/alpha_shape_watertight_4UG0.ply"
 clippedpath = "alpha_shape_watertight_4UG0-clipped.ply"
 
 
 if __name__ == "__main__":
     
     # Generate array of angles to visualize
-    angles = np.array([0, 45, 90, 135, 180, 225, 270, 315])
-    base_point          = np.array(landmark_ptc(RCSB_ID))
+    angles     = np.array([0, 45, 90, 135, 180, 225, 270, 315])
+    base_point = np.array(landmark_ptc(RCSB_ID))
     axis_point = np.array(landmark_constriction_site(RCSB_ID))
     
     angle = 45  # degrees

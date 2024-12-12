@@ -8,11 +8,10 @@ import plyfile
 import warnings
 # warnings.filterwarnings("ignore")
 import os
+import dotenv
 
 
-POISSON_RECON_BIN = os.environ.get("POISSON_RECON_BIN")
-
-
+POISSON_RECON_BIN = os.getenv("POISSON_RECON_BIN")
 def apply_poisson_reconstruction(surf_estimated_ptcloud_path: str, output_path: str, recon_depth:int=6, recon_pt_weight:int=3):
     # The documentation can be found at https://www.cs.jhu.edu/~misha/Code/PoissonRecon/Version16.04/ in "PoissonRecon" binary
     command = [
@@ -32,7 +31,6 @@ def apply_poisson_reconstruction(surf_estimated_ptcloud_path: str, output_path: 
     if process.returncode == 0:
         print(">>PoissonRecon executed successfully.")
         print(">>Wrote {}".format(output_path))
-        # Convert the plyfile to asciii
 
         data            = plyfile.PlyData.read(output_path)
         data.text       = True

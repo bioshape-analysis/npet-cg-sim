@@ -1,12 +1,15 @@
 from Bio.PDB.MMCIFParser import MMCIFParser
 import numpy as np
+import os
 
 import alphashape
 import trimesh
-def cif_to_point_cloud(cif_file):
+
+from data.asset_manager import StructureAssets
+def cif_to_point_cloud(cif_path:str):
     # Load the CIF file
     parser = MMCIFParser()
-    structure = parser.get_structure("structure", cif_file)
+    structure = parser.get_structure("structure", cif_path)
 
     # Extract atomic coordinates
     coordinates = []
@@ -70,10 +73,11 @@ def save_alpha_shape_as_ply(alpha_shape, file_path):
 
 RCSB_ID = '4UG0'
 alpha   = 0.05
+data_dir = os.environ.get('DATA_DIR')
 
 
 def produce_alpha_contour(RCSB_ID, alpha):
-    cif_file    = "./data/{}/{}.cif".format(RCSB_ID, RCSB_ID)
+    cif_file    = StructureAssets(data_dir, RCSB_ID).cif_struct
     point_cloud = cif_to_point_cloud(cif_file)
     point_cloud = np.array(point_cloud)
     alpha_shape = alphashape.alphashape(point_cloud,  alpha=0.05)
