@@ -1307,7 +1307,6 @@ def visualize_pointcloud_axis(ptcloud,aux_ptcloud, base_point, axis_point, radiu
     
     return transformed_ptcloud
 
-
 def visualize_pointcloud_axis_o3d(ptcloud, aux_ptcloud, base_point, axis_point, radius=0.1, height=None, rcsb_id:str|None=None, gif:bool=False, gif_name:str|None=None):
     """
     Visualize a point cloud oriented along a specified axis, with base/axis points and cylinder.
@@ -1431,7 +1430,6 @@ def visualize_pointcloud_axis_o3d(ptcloud, aux_ptcloud, base_point, axis_point, 
     # Render the scene
     vis.run()
     vis.destroy_window()
-
 
 def create_cylinder_from_points(base_point, axis_point, radius, height):
     """

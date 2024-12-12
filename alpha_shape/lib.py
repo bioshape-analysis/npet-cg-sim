@@ -1,11 +1,13 @@
+import warnings
 from Bio.PDB.MMCIFParser import MMCIFParser
 import numpy as np
 import os
-
 import alphashape
 import trimesh
-
+data_dir = os.environ.get('DATA_DIR')
 from data.asset_manager import StructureAssets
+warnings.filterwarnings("ignore")
+
 def cif_to_point_cloud(cif_path:str):
     # Load the CIF file
     parser = MMCIFParser()
@@ -71,38 +73,31 @@ def save_alpha_shape_as_ply(alpha_shape, file_path):
     alpha_shape.export(file_path, file_type='ply',encoding='ascii')
     print(f"Alpha shape saved as PLY file at {file_path}")
 
-RCSB_ID = '4UG0'
-alpha   = 0.05
-data_dir = os.environ.get('DATA_DIR')
 
 
 def produce_alpha_contour(RCSB_ID, alpha):
-    cif_file    = StructureAssets(data_dir, RCSB_ID).cif_struct
+    num_samples = 5000
+    assets = StructureAssets(data_dir, RCSB_ID)
+    cif_file    = assets.cif_struct
     point_cloud = cif_to_point_cloud(cif_file)
     point_cloud = np.array(point_cloud)
-    alpha_shape = alphashape.alphashape(point_cloud,  alpha=0.05)
+    print("Produced point cloud for {}".format(RCSB_ID))
+
+    print("Constructing alpha shape with a={}".format(alpha))
+    alpha_shape = alphashape.alphashape(point_cloud,  alpha)
     alpha_shape.show()
+
     components = alpha_shape.split(only_watertight=False)  # Get all components
     alpha_shape_largest = max(components, key=lambda c: abs(c.volume) )
     random.seed(10)
-    new_points = sample_within_alpha_shape(alpha_shape_largest,num_samples=4000)
-    print("Resampled points: ", new_points.shape)
+
+
+    print("Resampling {} points on initial alphashape M.".format(num_samples))
+    new_points        = sample_within_alpha_shape(alpha_shape_largest,num_samples)
     alpha_shape_renew = alphashape.alphashape(new_points, alpha)
     alpha_shape_renew.show()
-    save_alpha_shape_as_ply(alpha_shape_renew, "./data/{}/alpha_shape_watertight_{}.ply".format(RCSB_ID, RCSB_ID))
-    print("Saved to ./data/{}/alpha_shape_watertight_{}.ply".format(RCSB_ID, RCSB_ID))
+
+    save_alpha_shape_as_ply(alpha_shape_renew, assets.ashape_watertight)
+    print("Saved to {}".format(assets.ashape_watertight))
 
 
-
-# cif_file = "./data/{}/{}.cif".format(RCSB_ID, RCSB_ID)
-# point_cloud = cif_to_point_cloud(cif_file)
-# point_cloud = np.array(point_cloud)
-# alpha_shape = alphashape.alphashape(point_cloud,  alpha=0.05)
-# alpha_shape.show()
-# components = alpha_shape.split(only_watertight=False)  # Get all components
-# alpha_shape_largest = max(components, key=lambda c: abs(c.volume) )
-# random.seed(10)
-# new_points = sample_within_alpha_shape(alpha_shape_largest,num_samples=4000)
-# alpha_shape_renew = alphashape.alphashape(new_points, alpha)
-# alpha_shape_renew.show()
-# save_alpha_shape_as_ply(alpha_shape_renew, "./data/{}/alpha_shape_watertight_{}.ply".format(RCSB_ID, RCSB_ID))

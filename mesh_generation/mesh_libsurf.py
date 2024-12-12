@@ -6,7 +6,7 @@ import pyvista as pv
 import numpy as np
 import plyfile
 import warnings
-# warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore")
 import os
 import dotenv
 

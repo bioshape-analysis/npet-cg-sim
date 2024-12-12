@@ -17,8 +17,6 @@ from mesh_generation.mesh_visualization import (
     visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs,
     visualize_mesh,
     visualize_pointcloud,
-    visualize_pointcloud_axis,
-    visualize_pointcloud_axis_o3d,
 )
 from mesh_generation.mesh_full_pipeline import (
     DBSCAN_capture,
@@ -69,7 +67,6 @@ def create_point_cloud_mask(
 
     final_mask = hollow_cylinder | point_cloud_mask
     return final_mask, (x, y, z)
-
 
 def get_transformation_to_C0(
     base_point: np.ndarray, axis_point: np.ndarray
