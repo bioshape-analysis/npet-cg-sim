@@ -36,5 +36,23 @@ def sim_run():
     click.echo(f"Running simulation")
 
 
+
+@cli.group()
+def fig():
+    pass
+
+@fig.command("one")
+def one():
+    click.echo(f"Producing figure one")
+
+@fig.command("two")
+def two():
+    click.echo(f"Producing figure two")
+
+@fig.command("three")
+def three():
+    click.echo(f"Producing figure three")
+
+
 if __name__ == "__main__":
     cli()
