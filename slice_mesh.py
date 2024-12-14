@@ -212,7 +212,7 @@ def verify_mesh_orientation(mesh_path: str):
 
 RCSB_ID = "4UG0"
 data_dir = os.getenv("DATA_DIR")
-meshpath = StructureAssets(data_dir, RCSB_ID).ashape_watertight
+meshpath = StructureAssets(data_dir, RCSB_ID).  ashape_watertight
 clippedpath = StructureAssets(data_dir, RCSB_ID).ashape_half_mesh
 
 
