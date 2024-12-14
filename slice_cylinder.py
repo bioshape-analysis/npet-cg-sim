@@ -79,12 +79,13 @@ def filter_residues_by_plane(coords_dict: Dict[str, Dict[int, np.ndarray]],
             distance = np.dot(point_centered, plane_normal)
             
             # Keep residues on the negative side of the plane
-            if distance <= 0:
+            if distance > 0:
                 kept_residues.append(res_id)
         
         if kept_residues:
             filtered_residues[chain_id] = sorted(kept_residues)
     
+
     return filtered_residues
 
 def rotation_matrix_from_axis_angle(axis: np.ndarray, angle: float) -> np.ndarray:

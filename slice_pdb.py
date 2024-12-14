@@ -104,8 +104,6 @@ if __name__ == "__main__":
     axis_point = np.array(landmark_constriction_site(RCSB_ID))
     
     angle = 45  # degrees
-    
-        # Visualize the slice
     n_atoms = slice_pdb_with_output(
         struct,
         base_point,
