@@ -1,11 +1,9 @@
-import pickle
 from pprint import pprint
-import typing
 from matplotlib import pyplot as plt
 import pyvista as pv
 import json
 import numpy as np
-import numpy as np
+import open3d as o3d
 
 hexcolors = {
     'aliceblue'           : '#F0F8FF',
@@ -994,46 +992,123 @@ dbscan_pairs = [
 ]
 
 
-def visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs( dbscan_cluster_dict: dict[int, list], eps, min_nbrs, gif:bool=False, gif_name:str|None=None):
-    plotter               = pv.Plotter(off_screen=gif)
-    y_offset= 0.95
-    plotter.subplot(0,0)
-    for k, v in dbscan_cluster_dict.items():
-        print("Cluster {} has {} points.".format(k, len(v)))
+def visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs(dbscan_cluster_dict: dict[int, list], eps, min_nbrs, base_point, axis_point, refined, radius, height):
+    plotter = pv.Plotter()
+    plotter.subplot(0, 0)
 
+    # Print cluster sizes
+    cluster_sizes = {k: len(v) for k, v in dbscan_cluster_dict.items()}
+    for k, v in cluster_sizes.items():
+        print(f"Cluster {k} has {v} points.")
+
+    # Find the largest non-noise cluster
+    largest_cluster = max(
+        ((k, len(v)) for k, v in dbscan_cluster_dict.items() if k != -1),
+        key=lambda x: x[1]
+    )[0]
+
+    # Generate color palette for regular clusters
     clusters_palette = dict(zip(range(-1, 60), plt.cm.terrain(np.linspace(0, 1, 60))))
     for k, v in clusters_palette.items():
         clusters_palette[k] = [*v[:3], 0.5]
 
-    combined_cluster_colors = []
-    combined_cluster_points = []
+    # Create cylinder
+    # Calculate direction vector from base_point to axis_point
+    direction = np.array(axis_point) - np.array(base_point)
+    direction = direction / np.linalg.norm(direction)  # Normalize
+    
+    # Create cylinder centered at base_point
+    cylinder = pv.Cylinder(
+        center=axis_point,
+        direction=-direction,
+        radius=radius,
+        height=height
+    )
+    
+    # Add cylinder to plot with transparency
+    plotter.add_mesh(cylinder, opacity=0.1, color='gray', label='Cylinder', style='wireframe')
 
-    for i,( dbscan_label, coordinates ) in enumerate( dbscan_cluster_dict.items() ):
-        combined_cluster_points.extend(coordinates)
-        combined_cluster_colors.extend( [clusters_palette[( dbscan_label * 2 )%len(clusters_palette)]   if dbscan_label != -1 else [0, 0, 0, 0.1]] * len(coordinates) )
-        color = clusters_palette[( dbscan_label * 5 )%len(clusters_palette)]   if dbscan_label != -1 else [0, 0, 0, 0.1]
-        plotter.add_text(f"Cluster {dbscan_label}: {len(coordinates)} points", position=[10, i*20], font_size=10, color=color, font=FONT)
+    # Add each cluster separately
+    for cluster_label, coordinates in dbscan_cluster_dict.items():
+        points = np.array(coordinates)
+        if cluster_label == -1:
+            # Noise points
+            # ...
+            plotter.add_points(
+                points,
+                color      = 'gray',
+                opacity    = 0.1,
+                point_size = 1,
+                label      = 'Noise',
+                style      = 'points_gaussian',
+                emissive   = True
+            )
 
-    ptcloud_all_clusters         = pv.PolyData(combined_cluster_points)
-    ptcloud_all_clusters["rgba"] = combined_cluster_colors
+        elif cluster_label == largest_cluster:
+            # Largest cluster - blue spheres
+            print(points.shape)
+            plotter.add_points(
+                points,
+                color='cyan',
+                point_size=5,
+                opacity=0.15,
+                label=f'Cluster {cluster_label} (Largest)',
+                style='points',
+                render_points_as_spheres=True
+            )
+        else:
+            # Regular clusters
+            color = clusters_palette[(cluster_label * 2) % len(clusters_palette)]
+            plotter.add_points(
+                points,
+                # color=color[:3],
+                color='gray',
+                opacity=0.3,
+                point_size=2,
+                label=f'Cluster {cluster_label}',
+                style='points'
+            )
 
-    plotter.add_mesh(ptcloud_all_clusters, scalars="rgba", rgb=True, show_scalar_bar=False)
-    plotter.add_text('eps: {} \nmin_nbrs: {}'.format(eps, min_nbrs), position='upper_left', font_size=20, shadow=True, font=FONT, color='black')
+    print(refined)
+    print(refined.shape)
+    plotter.add_points(
+        refined,
+        color='blue',
+        point_size=3,
+        opacity=1,
+        label='refined_points',
+        style='points',
+        render_points_as_spheres=True
+    )
+    # Add reference points
+    plotter.add_points(
+        np.array([base_point]),
+        color='red',
+        point_size=20,
+        label='Base Point',
+        style='points',
+        render_points_as_spheres=True
+    )
+    plotter.add_points(
+        np.array([axis_point]),
+        color='red',
+        point_size=20,
+        label='Axis Point',
+        style='points',
+        render_points_as_spheres=True
+    )
 
+    # Add text information
+    plotter.add_text(
+        f'eps: {eps}\nmin_nbrs: {min_nbrs}',
+        position='upper_left',
+        font_size=20,
+        shadow=True,
+        font=FONT,
+        color='black'
+    )
 
-    if gif:
-        output_gif = gif_name
-        # plotter.camera.zoom(1.5)
-        plotter.open_gif(output_gif)
-
-        # Rotate the camera 360 degrees
-        for angle in range(0, 360, 5):  # 5 degree steps
-            plotter.camera.azimuth = angle
-            plotter.write_frame()
-        plotter.close()
-        print(f"GIF saved as {output_gif}")
-    else:
-        plotter.show()
+    plotter.show()
 
 def DBSCAN_CLUSTERS_visualize_largest(positive_space: np.ndarray, dbscan_cluster_dict: dict[int, list], selected_cluster: np.ndarray, gif:bool=False, gif_name:str|None=None):
     plotter               = pv.Plotter(shape=(1, 2), off_screen=True)
@@ -1103,7 +1178,6 @@ def DBSCAN_CLUSTERS_visualize_largest(positive_space: np.ndarray, dbscan_cluster
     else:
         plotter.show()
 
-
 def visualize_mesh(mesh_path, rcsb_id:str|None=None, gif:bool=False, gif_name:str|None=None):
     plotter = pv.Plotter(off_screen=gif)
 
@@ -1135,6 +1209,257 @@ def visualize_pointcloud(ptcloud,  rcsb_id:str|None=None, gif:bool=False, gif_na
     plotter.add_text('RCSB_ID:{}'.format(rcsb_id if rcsb_id is not None else "" ), position='upper_right', font_size=14, shadow=True, font='courier', color='black')
     plotter.add_points(pv.PolyData(ptcloud), color='black', point_size=3,  opacity=0.3)
     plotter.show()
+
+def visualize_pointcloud_axis(ptcloud,aux_ptcloud, base_point, axis_point, radius=0.1, height=None, rcsb_id:str|None=None, gif:bool=False, gif_name:str|None=None):
+    # Convert inputs to numpy arrays to ensure compatibility
+    base_point = np.asarray(base_point)
+    axis_point = np.asarray(axis_point)
+    ptcloud = np.asarray(ptcloud)
+    
+    # Calculate the original axis vector
+    original_axis = axis_point - base_point
+    original_axis_length = np.linalg.norm(original_axis)
+    original_axis = original_axis / original_axis_length
+    
+    # Set height to axis length if not specified
+    if height is None:
+        height = original_axis_length
+    
+    # Define the target z-axis (pointing down)
+    target_z_axis = np.array([0, 0, -1])
+    
+    # Calculate the rotation matrix to align the original axis with the z-axis
+    rotation_axis = np.cross(original_axis, target_z_axis)
+    
+    # Calculate the angle between the vectors
+    angle = np.arccos(np.dot(original_axis, target_z_axis))
+    
+    # Create rotation matrix using Rodrigues' rotation formula
+    if np.linalg.norm(rotation_axis) > 1e-10:
+        rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+        K = np.array([
+            [0, -rotation_axis[2], rotation_axis[1]],
+            [rotation_axis[2], 0, -rotation_axis[0]],
+            [-rotation_axis[1], rotation_axis[0], 0]
+        ])
+        R = (np.eye(3) + np.sin(angle) * K + 
+             (1 - np.cos(angle)) * np.dot(K, K))
+    else:
+        # If the vectors are already aligned, use identity matrix
+        R = np.eye(3)
+    
+    # Transform the point cloud
+    transformed_ptcloud = np.dot(ptcloud - base_point, R.T)
+    transformed_aux_pts = np.dot(aux_ptcloud - base_point, R.T)
+    
+    # Transform the base and axis points
+    transformed_base_point = np.dot(base_point - base_point, R.T)
+    transformed_axis_point = np.dot(axis_point - base_point, R.T)
+    
+    # Create the plotter
+    plotter = pv.Plotter()
+    
+    # Add visualization elements
+    n_labels = 7
+    # plotter.show_grid(n_xlabels=n_labels, n_ylabels=n_labels, n_zlabels=n_labels, font_size=8)
+    # plotter.add_axes(line_width=2, cone_radius=0.3, shaft_length=2, tip_length=1, ambient=1, label_size=(0.2, 0.6))
+    
+    # # Add RCSB ID text
+    # plotter.add_text(f'RCSB_ID:{rcsb_id if rcsb_id is not None else ""}', 
+    #                  position='upper_right', font_size=14, 
+    #                  shadow=True, font='courier', color='black')
+    
+    # Create and add transformed cylinder
+    cylinder = pv.Cylinder(
+        center=transformed_base_point + (height/2) * np.array([0, 0, -1]),
+        direction=[0, 0, -1],
+        radius=radius,
+        height=height,
+        resolution=50
+    ).triangulate()
+    
+    # Add cylinder with visible edges
+    # plotter.add_mesh(cylinder, color='blue', opacity=0.3, show_edges=True, edge_color='black')
+
+    plotter.add_mesh( cylinder, style='surface', line_width=3, show_edges=True, opacity=0.05, color='lightgreen', silhouette=True )
+    plotter.add_points(transformed_base_point, color='red', point_size=12, render_points_as_spheres=True)
+    plotter.add_points(transformed_axis_point, color='red', point_size=12, render_points_as_spheres=True)
+    plotter.add_points(pv.PolyData(transformed_ptcloud), render_points_as_spheres=True,  style='points', point_size=3, opacity=0.4)
+    plotter.add_points(pv.PolyData(transformed_aux_pts), render_points_as_spheres=True,  style='points', color='blue', point_size=5, opacity=0.8)
+    
+    # Show the plotr
+    plotter.show()
+    
+    camera_position = plotter.camera_position
+    # camera_focal_point = plotter.camera_focal_point
+    # camera_viewup = plotter.camera_viewup
+
+    # Then in a separate render
+    plotter_render = pv.Plotter(off_screen=True)
+    plotter_render.add_mesh( cylinder, style='surface', line_width=3, show_edges=True, opacity=0.05, color='lightgreen', silhouette=True )
+    plotter_render.add_points(transformed_base_point, color='red', point_size=12, render_points_as_spheres=True)
+    plotter_render.add_points(transformed_axis_point, color='red', point_size=12, render_points_as_spheres=True)
+    plotter_render.add_points(pv.PolyData(transformed_ptcloud), render_points_as_spheres=True,  style='points', point_size=3, opacity=0.4)
+    plotter_render.add_points(pv.PolyData(transformed_aux_pts), render_points_as_spheres=True,  style='points', color='blue', point_size=5, opacity=0.8)
+    
+    plotter_render.camera_position = camera_position
+    plotter_render.screenshot('4ug0_ptcloud.png', transparent_background=True, window_size=(1920,1280))
+    
+    return transformed_ptcloud
+
+def visualize_pointcloud_axis_o3d(ptcloud, aux_ptcloud, base_point, axis_point, radius=0.1, height=None, rcsb_id:str|None=None, gif:bool=False, gif_name:str|None=None):
+    """
+    Visualize a point cloud oriented along a specified axis, with base/axis points and cylinder.
+    
+    Parameters:
+    -----------
+    ptcloud : numpy.ndarray
+        The input point cloud coordinates
+    base_point : numpy.ndarray
+        The point defining the base of the axis
+    axis_point : numpy.ndarray
+        The point defining the tip of the axis
+    radius : float, optional
+        Radius of the cylinder (default 0.1)
+    height : float, optional
+        Height of the cylinder (default: distance between base and axis points)
+    rcsb_id : str, optional
+        Identifier for the point cloud
+    gif : bool, default False
+        Whether to create an off-screen render for GIF
+    gif_name : str, optional
+        Name of the output GIF file
+    """
+    # Convert inputs to numpy arrays to ensure compatibility
+    base_point = np.asarray(base_point)
+    axis_point = np.asarray(axis_point)
+    ptcloud = np.asarray(ptcloud)
+    aux_ptcloud = np.asarray(aux_ptcloud)
+    
+    # Calculate the original axis vector
+    original_axis = axis_point - base_point
+    original_axis_length = np.linalg.norm(original_axis)
+    original_axis = original_axis / original_axis_length
+    
+    # Set height to axis length if not specified
+    if height is None:
+        height = original_axis_length
+    
+    # Define the target z-axis (pointing down)
+    target_z_axis = np.array([0, 0, -1])
+    
+    # Calculate the rotation matrix to align the original axis with the z-axis
+    rotation_axis = np.cross(original_axis, target_z_axis)
+    angle = np.arccos(np.dot(original_axis, target_z_axis))
+    if np.linalg.norm(rotation_axis) > 1e-10:
+        rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)
+        R = o3d.geometry.get_rotation_matrix_from_axis_angle(angle * rotation_axis)
+    else:
+        # If the vectors are already aligned, use identity matrix
+        R = np.eye(3)
+    
+    # Transform the point cloud
+    transformed_ptcloud = np.dot(ptcloud - base_point, R.T)
+    transformed_aux_pts = np.dot(aux_ptcloud - base_point, R.T)
+    
+    # Transform the base and axis points
+    transformed_base_point = np.dot(base_point - base_point, R.T)
+    transformed_axis_point = np.dot(axis_point - base_point, R.T)
+    
+    # Create the Open3D visualization
+    vis = o3d.visualization.Visualizer()
+    vis.create_window()
+    
+    # Create the point cloud
+    mat1 = o3d.visualization.rendering.MaterialRecord()
+    mat1.shader = 'defaultLitTransparency'
+    mat1.base_color = [0.0, 0.6, 1.0, 0.5]  # Transparent blue
+    # mat1.roughness = 0.8  # Matte finish
+    
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(transformed_ptcloud)
+    pcd.colors = o3d.utility.Vector3dVector([ (0.8, 0.8, 0.8) for _ in range(len(transformed_ptcloud)) ])
+    
+    # Create the auxiliary point cloud
+    mat2 = o3d.visualization.rendering.MaterialRecord()
+    mat2.shader = 'defaultLitTransparency'
+    mat2.base_color = [0.0, 1.0, 0.0, 0.8]  # Semi-transparent green
+    # mat2.roughness = 0.5  # Slight gloss
+    
+    aux_pcd = o3d.geometry.PointCloud()
+    aux_pcd.points = o3d.utility.Vector3dVector(transformed_aux_pts)
+    aux_pcd.colors = o3d.utility.Vector3dVector([ (0, 0, 1) for _ in range(len(transformed_aux_pts)) ])
+    
+    # Create the cylinder
+    cylinder = o3d.geometry.TriangleMesh.create_cylinder( radius=radius, height=height )
+    cylinder.compute_vertex_normals()
+    cylinder.translate(transformed_base_point + (height/2) * np.array([0, 0, -1]))
+    cylinder.rotate(R, center=transformed_base_point)
+    cylinder.paint_uniform_color([0, 1, 0])
+    
+    mat3 = o3d.visualization.rendering.MaterialRecord()
+    mat3.shader = 'defaultLit'
+    mat3.base_color = [0, 1, 0, 0.3]  # Semi-transparent green
+    # mat3.roughness = 0.5  # Slight gloss
+    # mat3.edge_color = [0, 0, 0, 1]  # Black outline
+    
+    # cylinder.materials = [mat3]
+    
+    # Create the base and axis points
+    base_sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.02)
+    base_sphere.paint_uniform_color([1, 0, 0])
+    base_sphere.translate(transformed_base_point)
+    
+    axis_sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.02)
+    axis_sphere.paint_uniform_color([1, 0, 0])
+    axis_sphere.translate(transformed_axis_point)
+    
+    # Add the elements to the visualization
+    vis.add_geometry(pcd, mat1)
+    vis.add_geometry(aux_pcd, mat2)
+    vis.add_geometry(cylinder, mat3)
+    vis.add_geometry(base_sphere)
+    vis.add_geometry(axis_sphere)
+    
+    # Adjust the camera settings
+    ctr = vis.get_view_control()
+    ctr.set_front([0, 0, -1])
+    ctr.set_up([0, 1, 0])
+    ctr.set_zoom(1.0)
+    
+    # Render the scene
+    vis.run()
+    vis.destroy_window()
+
+def create_cylinder_from_points(base_point, axis_point, radius, height):
+    """
+    Create a cylinder using two points: a base point and a point defining the axis direction.
+    
+    Parameters:
+    base_point: array-like, [x, y, z] starting point of cylinder
+    axis_point: array-like, [x, y, z] point defining cylinder axis direction
+    radius: float, radius of cylinder
+    height: float, total height of cylinder (can extend past axis_point)
+    
+    Returns:
+    cylinder: PyVista cylinder mesh (triangulated)
+    direction: numpy array of normalized direction vector
+    """
+    base_point = np.array(base_point)
+    axis_point = np.array(axis_point)
+    
+    direction = axis_point - base_point
+    direction = direction / np.linalg.norm(direction)
+    
+    cylinder = pv.Cylinder(
+        center=base_point + (height/2) * direction,
+        direction=direction,
+        radius=radius,
+        height=height,
+        resolution=30
+    ).triangulate()
+    
+    return cylinder, direction
 
 def visualize_pointclouds(ptcloud1:np.ndarray, ptcloud2:np.ndarray, background_positive:np.ndarray, gif:bool=False, gif_name:str|None=None):
     plotter               = pv.Plotter(shape=(1, 2), off_screen=gif)

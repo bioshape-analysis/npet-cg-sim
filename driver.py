@@ -1,63 +1,58 @@
 import click
 from alpha_shape.lib import produce_alpha_contour
-from mesh_generation.kdtree_approach import main
+from mesh_generation.kdtree_approach import create_tunnel_mesh
 import sys
 sys.dont_write_bytecode = True
+
 
 @click.group()
 def cli():
     """Ribosome nascent peptide exit tunnel (NPET) extraction and simulation cli. See repo documentation and paper for more info."""
     pass
 
+
 @cli.command()
-# @click.option('--mode', default='default', help='Operation mode for alpha command')
-# @click.argument('input_file', type=click.Path(exists=True))
-def alpha():
-    produce_alpha_contour('4UG0', 0.05)
-    """Alpha command with configurable mode and input file."""
-    # click.echo(f"Alpha command executed with mode: {mode}")
-    # click.echo(f"Input file: {input_file}")
+@click.argument('rcsb_id', type=str)
+@click.argument('alpha', type=float)
+def alpha(rcsb_id:str, alpha:float=0.05):
+    produce_alpha_contour(rcsb_id.upper(), alpha)
 
 @cli.group()
 def mesh():
-    """Mesh command group with potential subcommands."""
     pass
 
-@mesh.command('create')
-# @click.option('--name', required=True, help='Name of the mesh to create')
-# @click.option('--type', default='default', help='Type of mesh')
-def mesh_create():
-    """Create a new mesh."""
-    # click.echo(f"Creating mesh: {name} with type: {type}")
-    main()
-    
+@mesh.command("create")
+@click.argument('rcsb_id')
+def mesh_create(rcsb_id:str):
+    create_tunnel_mesh(rcsb_id.upper())
 
-@mesh.command('list')
-def mesh_list():
-    """List available meshes."""
-    click.echo("Listing available meshes...")
 
 @cli.group()
 def sim():
-    """Simulation command group with potential subcommands."""
     pass
 
-@sim.command('run')
-@click.option('--config', type=click.Path(exists=True), help='Configuration file for simulation')
-@click.option('--output', type=click.Path(), help='Output directory for simulation results')
-def sim_run(config, output):
-    """Run a simulation with optional config and output specifications."""
+@sim.command("run")
+def sim_run():
     click.echo(f"Running simulation")
-    if config:
-        click.echo(f"Using configuration: {config}")
-    if output:
-        click.echo(f"Output will be saved to: {output}")
 
-@sim.command('analyze')
-@click.argument('result_file', type=click.Path(exists=True))
-def sim_analyze(result_file):
-    """Analyze simulation results."""
-    click.echo(f"Analyzing simulation results from: {result_file}")
 
-if __name__ == '__main__':
+
+@cli.group()
+def fig():
+    pass
+
+@fig.command("one")
+def one():
+    click.echo(f"Producing figure one")
+
+@fig.command("two")
+def two():
+    click.echo(f"Producing figure two")
+
+@fig.command("three")
+def three():
+    click.echo(f"Producing figure three")
+
+
+if __name__ == "__main__":
     cli()

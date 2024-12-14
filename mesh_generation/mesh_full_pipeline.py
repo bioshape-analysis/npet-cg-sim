@@ -60,23 +60,24 @@ def DBSCAN_capture(
 
 def DBSCAN_pick_largest_cluster(clusters_container:dict[int,list], pick_manually:bool=False)->np.ndarray:
     DBSCAN_CLUSTER_ID = 0
-    if pick_manually:
-        print("-------------------------------")
-        print("Running Manual Cluster Selection")
-        picked_id =  int(input("Enter Cluster ID to proceed the reconstruction with\n (options:[{}]):".format(list( clusters_container.keys() ))))
-        print("Choise cluster # {}".format(picked_id))
-        if picked_id == -2:
-            # if picked -2 ==> return largest
-            for k, v in clusters_container.items():
-                if int(k) == -1:
-                    continue
-                elif len(v) > len(clusters_container[DBSCAN_CLUSTER_ID]):
-                    DBSCAN_CLUSTER_ID = int(k)
-            return np.array(clusters_container[DBSCAN_CLUSTER_ID])
+    # if pick_manually:
+    #     print("-------------------------------")
+    #     print("Running Manual Cluster Selection")
+    #     picked_id =  int(input("Enter Cluster ID to proceed the reconstruction with\n (options:[{}]):".format(list( clusters_container.keys() ))))
+    #     print("Choise cluster # {}".format(picked_id))
+    #     if picked_id == -2:
+    #         # if picked -2 ==> return largest
+    #         for k, v in clusters_container.items():
+    #             if int(k) == -1:
+    #                 continue
+    #             elif len(v) > len(clusters_container[DBSCAN_CLUSTER_ID]):
+    #                 DBSCAN_CLUSTER_ID = int(k)
+    #         return np.array(clusters_container[DBSCAN_CLUSTER_ID])
 
-        return np.array(clusters_container[picked_id])
+    #     return np.array(clusters_container[picked_id])
 
     for k, v in clusters_container.items():
+        print(f"Cluster {k} has {len(v)} points.")
         if int(k) == -1:
             continue
         elif len(v) > len(clusters_container[DBSCAN_CLUSTER_ID]):

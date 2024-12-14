@@ -24,8 +24,6 @@ def ribosome_entities(rcsb_id:str, cifpath:str, level=Literal['R']|Literal[ 'A' 
     else:
         raise
 
-
-
 def create_cylinder_from_points(base_point, axis_point, radius, height):
     """
     Create a cylinder using two points: a base point and a point defining the axis direction.
@@ -138,6 +136,8 @@ def make_cylinder_predicate(
 
 def get_residue_position(residue):
     return residue.center_of_mass()
+# def get_residue_position(residue):
+#     return residue.get_coord()
 
 def _worker_process_chunk(chunk_data):
     """

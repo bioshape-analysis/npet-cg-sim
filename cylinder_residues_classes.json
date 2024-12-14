@@ -1,0 +1,18 @@
+{
+    "L5": ["28SrRNA" ], // deep gray // RGB(30, 41, 59)
+    "L8": ["5.8SrRNA"], // pale gray // RGB(226, 232, 240)
+    "LA": ["uL2"     ], // red // RGB(185, 28, 28)
+    "LB": ["uL3"     ], // bright red // RGB(220, 38, 38)
+    "LC": ["uL4"     ], // medium red // RGB(239, 68, 68)
+    "LN": ["eL15"    ], // medium brown // RGB(194, 65, 12)
+    "LO": ["uL13"    ], // vivid red // RGB(204, 39, 39)
+    "LP": ["uL22"    ], // deep warm red // RGB(143, 29, 29)
+    "LR": ["eL19"    ], // bright brown // RGB(249, 115, 22)
+    "LX": ["uL23"    ], // rich warm red // RGB(182, 28, 28)
+    "LY": ["uL24"    ], // vivid warm red // RGB(219, 38, 38)
+    "La": ["uL15"    ], // medium warm red // RGB(241, 87, 87)
+    "Le": ["eL32"    ], // bronze // RGB(180, 83, 9)
+    "Lh": ["uL29"    ], // bright intense red // RGB(244, 53, 53)
+    "Lj": ["eL37"    ], // burnt umber // RGB(146, 64, 14)
+    "Ll": ["eL39"    ] // ochre // RGB(217, 119, 6)
+}
