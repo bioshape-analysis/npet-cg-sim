@@ -1,0 +1,19 @@
+#Parameters
+epsilon_0 = 8.854*10**-12 #F/m
+epsilon_rel = 40  #average value of protein, rna, and water 
+lamda_d = 3
+
+def potential(distance,charge):
+    """Screened Coulomb potential calculations."""
+    screened = np.exp(-distance/lamda_d)
+    V_charge = screened*charge*1.6*10**-19*10**10/(4*np.pi*epsilon_0*epsilon_rel*distance)
+
+    return V_charge
+
+def calculate_distance(point1, point2):
+     """Calculate Euclidean distance between two 3D points."""
+    p1 = np.array(point1)
+    p2 = np.array(point2)
+    distance = np.linalg.norm(p2 - p1)
+
+    return distance
