@@ -1,1 +1,3 @@
 # Here we show how to use LAMMPS to delete overlapping particles for tunnel wall and ribosome surface, and make the tunnel exit port opening
+# File in.merge_tunnel is used to refine the tunnel model
+# File in.merge_sphere is used to refine the ribosome surface model
