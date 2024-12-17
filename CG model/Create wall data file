@@ -111,7 +111,6 @@ def compute_vertex_normals_from_stl(stl_file):
     vertex_normals = vertex_normals / np.maximum(norms, 1e-8)  
     new_points = unique_vertices + 1.75 * vertex_normals
 
-
     return unique_vertices, vertex_normals, new_points
 
 
