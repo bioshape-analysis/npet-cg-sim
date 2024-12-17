@@ -1,0 +1,140 @@
+
+variable T equal 293
+
+variable CON0 equal 100000  # equilibration step
+
+
+label loop
+
+variable n loop 1 1    # Loop number can be modified if you want to sample more initial configurations
+
+# set up the system
+
+units              real
+boundary 	   p p p
+atom_style         full
+bond_style         harmonic
+angle_style        harmonic     
+pair_style         hybrid lj/cut/coul/debye 0.33 3.5 10 lj/cut/coul/debye 0.33 12     
+
+dihedral_style     opls                
+special_bonds      lj/coul 0.0 0.0 0.5    
+
+region sys block 0.0 1000.0 0.0 1000.0 0.0 1000.0
+
+create_box 3 sys bond/types 1 angle/types 1 dihedral/types 1 extra/bond/per/atom 1 extra/angle/per/atom 2  extra/dihedral/per/atom 3
+
+
+read_data  data.4UG0_tunnel_charged add append offset 0 0 0 0 0 
+
+# read_data  data.4UG0_sphere_charged add append offset 0 0 0 0 0  # if you want to include ribosome surface in your simulations
+
+dielectric 40   # change dielectric constant of your system, depending how you calculate the electrostatic potentials
+
+pair_coeff 1 1 lj/cut/coul/debye 1 0.066 3.5   # define pair coefficient
+
+pair_coeff 1 2 lj/cut/coul/debye 1 0.066 3.5     
+
+pair_coeff 1 3 lj/cut/coul/debye 1 0.066 3.5    
+
+pair_coeff 2 2 lj/cut/coul/debye 2 0.066 3.5  
+
+pair_coeff 2 3 lj/cut/coul/debye 2 0.066 3.5 
+
+pair_coeff 3 3 lj/cut/coul/debye 2 0.066 3.5  
+
+
+bond_coeff 1  268  1.529      # define bond coefficient
+ 
+angle_coeff 1  58.35   112.7     # define angle coefficient
+
+dihedral_coeff 1  0   0   0   0     # define dihedral coefficient
+
+mass 1 12    # define atom mass
+
+mass 2 12    
+
+mass 3 12    
+ 
+group tunnel type 1    # group the type 1 atoms in "tunnel"
+
+
+neigh_modify exclude type 1 1    # exclude interactions between type 1 atoms (wall particles)
+
+
+read_data  data.lj_4UG0 add append offset 1 0 0 0 0    # or data.lj_4UG0_charged
+
+
+group nc type 2 3      # group the type 2 and 3 atoms in "nc"
+
+
+compute www tunnel count/type atom   # Calculate the number of atoms in group tunnel
+
+run 0
+ 
+variable wall equal c_www[1]      # wall particle numbers
+
+variable chain equal ${wall}+1     # atom number of C-terminus of polymer
+ 
+variable chain2 equal ${chain}+3*${mer}-1   # atom number of N-terminus of polymer
+
+
+group c_ter id ${chain} 
+
+group n_ter id ${chain2}
+
+
+group rest subtract nc c_ter
+
+
+timestep 1.0
+
+
+velocity nc create ${T} 54634234        # assign initial velocities for polymer particles
+                                        
+run 0
+
+velocity nc scale ${T}
+
+velocity nc zero linear
+velocity nc zero angular
+
+
+thermo_style custom step temp press pe density  
+
+
+thermo    1000
+
+
+neigh_modify delay 0 every 1 check yes
+
+min_style       sd               # Minimization of system energy
+
+minimize        1.0e-8 1.0e-6 1000 1000
+
+
+variable CON   equal   5000*($n)   
+
+variable CONnew   equal ${CON0}+${CON}     # equilibriate time steps depending on loop number
+
+fix         1   rest nvt temp ${T} ${T} 10    # fix the C-terminus at PTC
+
+dump        1   tunnel custom 1000 4UG0_tunnel.lammpstrj id element x y z q     # save trajectories for wall particles
+
+dump        2   nc custom 1000 4UG0_6mer_${n}_initial.lammpstrj id element x y z q   # save trajectories for polymer
+
+run         ${CONnew}                      # get different initial config.
+
+
+write_restart 4UG0_restart$n.save   
+
+clear
+
+next        n
+
+jump SELF loop
+
+quit
+
+
+

@@ -1,0 +1,122 @@
+
+variable displace equal ${idis}   # The tunnel length calculated in python
+ 
+variable T equal 293
+
+
+label loop
+
+variable n loop 1 1
+
+read_restart 4UG0_restart$n.save     # read the last polymer config. after equilibrium
+
+group terminus union c_ter n_ter
+
+pair_coeff 1 1 lj/cut/coul/debye 1 0.066 3.5
+
+pair_coeff 1 2 lj/cut/coul/debye 1 0.066 3.5    
+
+pair_coeff 1 3 lj/cut/coul/debye 1 0.066 3.5   
+
+pair_coeff 2 2 lj/cut/coul/debye 2 0.066 3.5  
+
+pair_coeff 2 3 lj/cut/coul/debye 2 0.066 3.5 
+
+pair_coeff 3 3 lj/cut/coul/debye 2 0.066 3.5 
+
+
+neigh_modify exclude type 1 1
+
+
+timestep 1.0
+
+
+velocity nc create ${T} 54634234          # set 0 0 0                      #post no
+                                         # temperature may not be 300K
+run 0
+
+velocity nc scale ${T}
+
+velocity nc zero linear
+velocity nc zero angular
+
+compute 1 all pe
+
+compute 2 n_ter displace/atom 
+
+compute 3 c_ter displace/atom 
+
+
+compute www tunnel count/type atom
+
+run 0
+
+variable wall equal c_www[1]
+
+variable chain equal ${wall}+1   
+
+variable chain2 equal ${chain}+3*${mer}-1  
+
+
+reset_timestep  0
+
+thermo_style custom step temp press pe density
+
+thermo    1000
+
+variable check equal 0
+
+fix         1   nc nvt temp ${T} ${T} 10
+fix         2   nc ave/time 100 100 10000 c_1 file pe_${n}.txt  # save the energy profile
+
+dump        1   c_ter custom 1000 summary_${n}.txt id c_3[4]   # save the computed results
+
+dump        2   nc custom 1000 4UG0_chain_${n}.lammpstrj id element x y z q  # save the movement of polymer within the tunnel
+
+dump        3   terminus custom 1000 unwrapped_${n}.txt id type xu yu zu    # save the information of particles during simulations
+
+
+
+label loopa
+
+variable a loop 3000   # 1.5E7 fs in total (around 10 ns)
+
+run         5000
+
+variable dsp equal C_3[v_chain][4]  # Calculate the displacement of C-terminus from the PTC
+
+if "${dsp} > ${displace}" then "variable check equal 1"    # if the displacement of C-terminus is greater than tunnel length, then jump out of the loop and terminate the simulation
+
+if " ${check} == 1 " then &
+  "run 40000" &
+  "jump SELF break"
+
+next a
+jump      in.post_NC loopa
+
+run         40000
+
+label       break
+variable    a delete 
+
+undump      3
+undump      2
+undump      1
+
+unfix       2
+
+unfix       1
+
+# End of loop
+
+clear
+
+next        n
+
+jump SELF loop
+
+
+quit
+
+
+
