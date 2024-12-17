@@ -10,7 +10,7 @@ import pymeshlab
 # Some useful functions
 
 def write_data_file(filename, num_atoms):
-    """Create the head of the data file of wall particles for LAMMPS."""
+    """Create the header section of the wall particle data file for LAMMPS."""
     with open(filename, 'w') as f:
     
         # Write the initial section
