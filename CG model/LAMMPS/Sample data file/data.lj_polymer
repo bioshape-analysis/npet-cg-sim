@@ -10,9 +10,9 @@ LAMMPS data file. CGCMM style.
  1 dihedral types
  0 improper types
 
- 0  1000  xlo xhi          #-2.950000 9.868000
- 0  1000  ylo yhi         # -6.784000 11.824000
- 0  1000  zlo zhi         #-11.057000 7.885000
+ 0  1000  xlo xhi         
+ 0  1000  ylo yhi        
+ 0  1000  zlo zhi        
 
  Masses
 
