@@ -166,7 +166,8 @@ def compute_edge_normals(stl_file):
     return edge_midpoints, edge_normals, edge_new_points
 
 
-# Example Usage
+# Example Usage for tunnel wall particles
+# Exactly the same processes for ribosome surface particles
 
 molecule = "4UG0"
 
