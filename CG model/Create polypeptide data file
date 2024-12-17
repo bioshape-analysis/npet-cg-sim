@@ -2,7 +2,7 @@ import pandas as pd
 import csv
 import numpy as np
 
-# Useful functions
+# Some useful functions
 
 def read_csv_and_extract_coordinates(filename):
     """Reads a CSV file and extracts the last three columns (X, Y, Z) into a list of tuples."""
