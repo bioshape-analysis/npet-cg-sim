@@ -1,0 +1,12 @@
+def read_csv_and_extract_coordinates(filename):
+    """Reads a CSV file and extracts the last three columns (X, Y, Z) into a list of tuples."""
+    # Read the CSV file
+    df = pd.read_csv(filename)
+
+    # Extract the last three columns (X, Y, Z)
+    coordinates = df[['X', 'Y', 'Z']].to_records(index=False)
+
+    # Convert to a list of tuples
+    coords_list = [tuple(coord) for coord in coordinates]
+
+    return coords_list
