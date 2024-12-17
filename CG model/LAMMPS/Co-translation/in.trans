@@ -1,0 +1,200 @@
+
+variable T equal 293
+
+variable CON0 equal 100000  # equilibration step
+
+
+label loop
+
+variable n loop 1 1
+
+# set up the system
+
+units              real
+boundary 	   p p p
+atom_style         full
+bond_style         harmonic
+angle_style        harmonic    
+pair_style         hybrid lj/cut/coul/debye 0.33 3.5 10 lj/cut/coul/debye 0.33 12 
+dihedral_style     opls              
+special_bonds      lj/coul 0.0 0.0 0.5    
+
+region sys block 0.0 1000.0 0.0 1000.0 0.0 1000.0
+
+create_box 2 sys bond/types 1 angle/types 1 dihedral/types 1 extra/bond/per/atom 1 extra/angle/per/atom 2  extra/dihedral/per/atom 3
+
+dielectric 40   # change dielectric constant of your system, depending how you calculate the electrostatic potentials
+
+read_data  data.4UG0_sphere_charged add append offset 0 0 0 0 0 
+
+read_data  data.4UG0_tunnel_charged add append offset 0 0 0 0 0  
+
+
+pair_coeff 1 1 lj/cut/coul/debye 1 0.066 3.5   # define pair coefficient
+
+pair_coeff 1 2 lj/cut/coul/debye 1 0.066 3.5   
+    
+pair_coeff 2 2 lj/cut/coul/debye 2 0.066 3.5 
+ 
+
+bond_coeff 1  268  1.529       # define bond coefficient
+ 
+angle_coeff 1  58.35   112.7     # define angle coefficient
+
+dihedral_coeff 1  0   0   0   0        # define dihedral coefficient
+
+mass 1 12    # define atom mass
+
+mass 2 12   
+
+ 
+group tunnel type 1   # group the type 1 atoms in "tunnel"
+
+reset_atoms id sort yes   # re-assign atom numbers
+
+neigh_modify exclude type 1 1   # exclude interactions between type 1 atoms (wall particles)
+
+
+read_data  data.lj_single add append offset 1 0 0 0 0  
+
+
+group nc type 2  # group the type 2 atoms in "nc"
+
+
+compute www tunnel count/type atom   # Calculate the number of atoms in group tunnel
+ 
+run 0
+
+variable wall equal c_www[1]   # wall particle numbers 
+
+variable chain equal ${wall}+1   # atom number of C-terminus of polymer
+
+variable chain2 equal ${chain}   # atom number of N-terminus of polymer
+
+group c_ter id ${chain2} 
+
+group n_ter id ${chain}
+
+group rest subtract nc c_ter
+
+neigh_modify exclude group rest c_ter    # exclude interactions between C-terminus and other polymer particles
+
+neigh_modify exclude group tunnel c_ter  # exclude interactions between C-terminus and wall particles
+
+
+timestep 1.0
+
+
+thermo_style custom step temp press pe density cpu    # show cpu time
+
+thermo    1000
+
+
+variable check equal 0
+
+variable start timer
+
+
+neigh_modify delay 0 every 1 check yes
+
+min_style       sd             # Minimization of system energy
+
+minimize        1.0e-8 1.0e-6 1000 1000
+
+
+fix         1   rest nvt temp ${T} ${T} 10      # fix the bead at the PTC
+
+dump        1   tunnel atom 1000 4UG0_tunnel.lammpstrj 
+
+run         5000                   
+
+
+label loopa
+
+
+variable a loop 3000   # 1.5E7 fs in total (around 10 ns)
+
+displace_atoms nc random 0.5 0 0.5 10086 units box      # move the polymer toward the exit port
+
+read_data  ${mer}/data.lj_single add append offset 1 0 0 0 0  # introduce a new bead at the PTC
+
+
+pair_coeff 1 1 lj/cut/coul/debye 1 0.066 3.5  
+
+pair_coeff 1 2 lj/cut/coul/debye 1 0.066 3.5   
+    
+pair_coeff 2 2 lj/cut/coul/debye 2 0.066 3.5 
+
+
+group nc type 2
+
+
+# re-group the terminus
+
+group c_ter delete 
+
+group n_ter delete
+
+
+variable wall equal c_www[1]
+
+variable chain equal ${wall}+1
+
+variable chain2 equal ${chain}+${a}   
+
+variable chain3 equal ${chain2}-1
+
+variable chain4 equal ${chain2}-2
+
+
+group c_ter id ${chain2} 
+
+group n_ter id ${chain}
+
+
+group rest subtract nc c_ter
+
+create_bonds single/bond 1 ${chain2} ${chain3}   # generate harmonic bonds between the new beads and the polymer
+
+if " ${a} >= 2 " then &
+  "create_bonds single/angle 1 ${chain2} ${chain3} ${chain4}"   # if the bead number is greater than three, generate harmonic angles
+
+if "${a} >= 2" then &
+ "min_style       sd" &         # Minimization of system energy between each addition to ensure no particles overlapping
+ "minimize        1.0e-8 1.0e-6 1000 1000"&
+ "fix 10 tunnel setforce 0.0 0.0 0.0"
+
+
+run         10000       # equilibration time step
+
+
+if "${a} == 60" then "variable check equal 1"      # if the polymer length reach 60 beads (or 20 amino acids), jump out of the loop
+
+if " ${check} == 1 " then &
+  "dump  2   nc custom 500 4UG0_chain.lammpstrj id element x y z" &    # save trajectories for the fully translated polymer
+  "run 10000" &
+  "jump SELF break"
+
+
+next a
+jump   in.trans loopa
+
+label break
+
+variable stop timer
+
+print "Elapsed time: $(v_stop-v_start:%.6f)"
+
+
+write_restart trans_restart$n.save    # save the system information for further studies
+
+clear
+
+next        n
+
+jump SELF loop
+
+quit
+
+
+
