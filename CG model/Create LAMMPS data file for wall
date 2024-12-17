@@ -46,13 +46,6 @@ def append_coordinates_to_file(output_filename, final_points):
 
             # Write the formatted line
             file.write(f"{i} \t1\t1\t0.0\t{x:.6f}\t{y:.6f}\t{z:.6f}\n")
-            
-
-def calculate_distance(point1, point2):
-    """Calculate the Euclidean distance between two 3D points."""
-    return np.sqrt((point1[0] - point2[0]) ** 2 + 
-                   (point1[1] - point2[1]) ** 2 + 
-                   (point1[2] - point2[2]) ** 2)
 
 
 def parse_stl(stl_file):
@@ -76,19 +69,6 @@ def parse_stl(stl_file):
 
     return vertices, normals, new_points, centroids, normalized_vectors
 
-
-def read_csv_and_extract_coordinates(filename):
-    """Reads a CSV file and extracts the last three columns (X, Y, Z) into a list of tuples."""
-    # Read the CSV file
-    df = pd.read_csv(filename)
-
-    # Extract the last three columns (X, Y, Z)
-    coordinates = df[['X', 'Y', 'Z']].to_records(index=False)
-
-    # Convert to a list of tuples
-    coords_list = [tuple(coord) for coord in coordinates]
-
-    return coords_list
     
 def compute_vertex_normals_from_stl(stl_file):
     """
