@@ -207,11 +207,17 @@ def verify_mesh_orientation(mesh_path: str):
     return mesh
 
 
-RCSB_ID = "4UG0"
-data_dir = os.getenv("DATA_DIR")
-meshpath = StructureAssets(data_dir, RCSB_ID).  ashape_watertight
+RCSB_ID     = "4UG0"
+data_dir    = os.getenv("DATA_DIR")
+meshpath    = StructureAssets(data_dir, RCSB_ID).ashape_watertight
 clippedpath = StructureAssets(data_dir, RCSB_ID).ashape_half_mesh
 
+# if __name__ == "__main__":
+#     data            = plyfile.PlyData.read(meshpath)
+#     data.text       = True
+#     ascii_duplicate = clippedpath.split(".ply")[0] + "_ascii.ply"
+#     data.write(ascii_duplicate)
+#     print(f"Saved clipped mesh to {clippedpath}")
 
 if __name__ == "__main__":
 

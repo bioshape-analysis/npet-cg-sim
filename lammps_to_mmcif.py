@@ -1,3 +1,8 @@
+import os
+
+
+from data.asset_manager import StructureAssets
+
 def read_lammps_file(filename):
     """Read LAMMPS trajectory file and extract atom coordinates."""
     atoms = []
@@ -53,8 +58,18 @@ def convert_lammps_to_pdb(input_file, output_file):
     """Convert LAMMPS trajectory file to PDB format."""
     atoms, box_bounds = read_lammps_file(input_file)
     write_pdb(atoms, box_bounds, output_file)
+    print("Wrote {}".format(output_file))
+
+
+
+
+
+
 
 if __name__ == "__main__":
-    input_file = "tunnel.lammpstrj"
-    output_file = "output_tunnel.pdb"           # Replace with desired output file name
-    convert_lammps_to_pdb(input_file, output_file)
+    RCSB_ID     = "4UG0"
+    data_dir    = os.getenv("DATA_DIR")
+    SA = StructureAssets(data_dir, RCSB_ID)
+
+    convert_lammps_to_pdb(SA.lammps_traj_ashape, SA.lammps_traj_ashape_as_pdb)
+    convert_lammps_to_pdb(SA.lammps_traj_tunnel, SA.lammps_traj_tunnel_as_pdb)

@@ -13,6 +13,7 @@ data_dir = os.getenv('DATA_DIR')
 
 sys.dont_write_bytecode = True
 import pyvista as pv
+from dbscan_to_pdb import  convert_pointcloud_to_halfslice_mmcif, write_pointcloud_to_pdb, write_pointcloud_to_mmcif
 from mesh_generation.mesh_visualization import (
     visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs,
     visualize_mesh,
@@ -236,6 +237,7 @@ def visualize_clipping_result(
     p.show()
 
 
+
 def clip_pcd_via_ashape(
     pcd: np.ndarray, mesh: pv.PolyData
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -249,7 +251,7 @@ def clip_pcd_via_ashape(
     return ashape_interior, ashape_exterior
 
 def create_tunnel_mesh(RCSB_ID:str):
-    assets = StructureAssets(data_dir, RCSB_ID)
+    assets    = StructureAssets(data_dir, RCSB_ID)
     cifpath   = assets.cif_struct
     R         = 40
     H         = 100
@@ -307,10 +309,41 @@ def create_tunnel_mesh(RCSB_ID:str):
     largest_cluster = DBSCAN_pick_largest_cluster(clusters_container)
     # visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs( clusters_container, _u_EPSILON_initial_pass, _u_MIN_SAMPLES_initial_pass, ptc_pt, constriction_pt, np.array([[1,1,1]]))
     # exit()
-    db, clusters_refinement = DBSCAN_capture(
-        largest_cluster, _u_EPSILON_refinement, _u_MIN_SAMPLES_refinement
-    )
-    refined = DBSCAN_pick_largest_cluster(clusters_refinement)
+    db, refined_clusters_container = DBSCAN_capture( largest_cluster, _u_EPSILON_refinement, _u_MIN_SAMPLES_refinement )
+    refined = DBSCAN_pick_largest_cluster(refined_clusters_container)
+
+
+    noise = np.array( clusters_container[-1] )
+    print(noise.shape)
+    visualize_pointcloud(noise)
+    # # write_point_clouds_to_pdb([noise], assets.dbscan_clusters_PDB)
+    # write_pointcloud_to_mmcif(noise          , StructureAssets(data_dir, RCSB_ID).dbscan_clusters_mmcif_noise  )
+    # write_pointcloud_to_mmcif(refined        , StructureAssets(data_dir, RCSB_ID).dbscan_clusters_mmcif_refined)
+    # write_pointcloud_to_mmcif(largest_cluster, StructureAssets(data_dir, RCSB_ID).dbscan_clusters_mmcif_largest)
+
+    # print('wrote cif')
+
+
+    # write_pointcloud_to_xyz(noise          , StructureAssets(data_dir, RCSB_ID).dbscan_clusters_xyz_noise  )
+    # write_pointcloud_to_xyz(refined        , StructureAssets(data_dir, RCSB_ID).dbscan_clusters_xyz_refined)
+    # write_pointcloud_to_xyz(largest_cluster, StructureAssets(data_dir, RCSB_ID).dbscan_clusters_xyz_largest)
+
+    convert_pointcloud_to_halfslice_mmcif(noise          , StructureAssets(data_dir, RCSB_ID).dbscan_clusters_xyz_noise  .split('.xyz')[0]+'_halfslice.cif',ptc_pt,constriction_pt,R,H,45)
+    convert_pointcloud_to_halfslice_mmcif(refined        , StructureAssets(data_dir, RCSB_ID).dbscan_clusters_xyz_refined.split('.xyz')[0]+'_halfslice.cif',ptc_pt,constriction_pt,R,H,45)
+    convert_pointcloud_to_halfslice_mmcif(largest_cluster, StructureAssets(data_dir, RCSB_ID).dbscan_clusters_xyz_largest.split('.xyz')[0]+'_halfslice.cif',ptc_pt,constriction_pt,R,H,45)
+   
+    # print('wrote xyz')
+
+
+    exit()
+    # refined, largest_cluster, noise
+
+    # print("Shape of refined:", refined.shape)
+    # print("Shape of largest:", largest_cluster.shape)
+    # print("Shape of noise:", noise.shape)
+    exit()
+
+
     visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs(
         clusters_container,
         _u_EPSILON_initial_pass,

@@ -1,5 +1,6 @@
 import click
 from alpha_shape.lib import produce_alpha_contour
+import dbscan_to_pdb
 from mesh_generation.kdtree_approach import create_tunnel_mesh
 import sys
 sys.dont_write_bytecode = True
@@ -43,10 +44,15 @@ def fig():
 
 @fig.command("one")
 def one():
+    # slice_tunnel
+    # slice_pdb
+    # slice_mesh
+    # lammps_to_mmcif
     click.echo(f"Producing figure one")
 
 @fig.command("two")
 def two():
+    # dbscan_to_pdb()
     click.echo(f"Producing figure two")
 
 @fig.command("three")

@@ -1,8 +1,10 @@
+import os
 import numpy as np
 from Bio import PDB
 from typing import Tuple, List, Union
 import pyvista as pv
 
+from data.asset_manager import StructureAssets
 from mesh_generation.util import landmark_constriction_site, landmark_ptc
 
 
@@ -96,18 +98,12 @@ def rotation_matrix_from_axis_angle(axis: np.ndarray, angle: float) -> np.ndarra
     return R
 
 
-RCSB_ID  = "4UG0"
-struct = 'output_tunnel.pdb'
-clipped= 'tunnel-clipped.pdb'
+RCSB_ID     = "4UG0"
+data_dir    = os.getenv("DATA_DIR")
 if __name__ == "__main__":
-    base_point          = np.array(landmark_ptc(RCSB_ID))
+    SA = StructureAssets(data_dir, RCSB_ID)
+    base_point = np.array(landmark_ptc(RCSB_ID))
     axis_point = np.array(landmark_constriction_site(RCSB_ID))
-    
-    angle = 45  # degrees
-    n_atoms = slice_pdb_with_output(
-        struct,
-        base_point,
-        axis_point,
-        angle,
-        clipped
-    )
+    angle      = 45  
+    slice_pdb_with_output( SA.lammps_traj_ashape_as_pdb, base_point, axis_point, angle, SA.lammps_traj_ashape_as_pdb.split(".pdb")[0]+ '_half.pdb' )
+    slice_pdb_with_output( SA.lammps_traj_tunnel_as_pdb, base_point, axis_point, angle, SA.lammps_traj_tunnel_as_pdb.split(".pdb")[0]+ '_half.pdb' )
