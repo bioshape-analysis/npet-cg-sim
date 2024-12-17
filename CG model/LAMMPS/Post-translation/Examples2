@@ -1,3 +1,0 @@
-# In this folder, we give an example of how to simulate the post-translational process of a peptide protein in the CG model with charges
-# Run in.post_intial first to equilibrate the poltpeptide chain whose C-terminus is fixed at the PTC
-# Then run in.post_NC to release the polypeptide and track its movement until all amino acid resiudes exit the tunnel
