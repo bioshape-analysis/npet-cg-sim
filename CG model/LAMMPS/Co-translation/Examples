@@ -1,0 +1,2 @@
+# In this folder, we give an example of how to simulate the co-translational process of a polypeptide in the CG model with charges
+# Run file in.trans to simulate the elongation from 1 bead to N beads by iteratively reading the file data.lj_single which contains only one bead at the PTC.
