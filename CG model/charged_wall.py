@@ -110,7 +110,33 @@ def interpolate_spline(grid_origin, grid_deltas, grid_counts, data, query_points
 
     return interpolated_values
 
+def parse_dx_file(dx_file):
+    """
+    Extract grid info from dx.file
+    """
+    grid_origin = None
+    grid_deltas = []
+    grid_counts = None
 
+    with open(dx_file, 'r') as file:
+        for line in file:
+            # Extract grid counts
+            if "counts" in line:
+                parts = line.split()
+                grid_counts = tuple(map(int, parts[-3:]))  # Last 3 elements are counts
+
+            # Extract grid origin
+            elif line.startswith("origin"):
+                parts = line.split()
+                grid_origin = [float(parts[1]), float(parts[2]), float(parts[3])]
+
+            # Extract grid deltas
+            elif line.startswith("delta"):
+                parts = line.split()
+                grid_deltas.append([float(parts[1]), float(parts[2]), float(parts[3])])
+
+    return grid_origin, grid_deltas, grid_counts
+    
 
 # 1. Example usage (for tunnel wall particles only)
 
@@ -319,10 +345,7 @@ print("3D Coordinates:", len(sphere_coordinates),sphere_coordinates[0])
 grid_positions, data_array, matched_data = parse_opendx(f"/Users/Desktop/{molecule}_map.dx")
 
 # Calculate the interpolated potentials at the ribosome surface wall particle coordinates
-# Copy those values from map.dx file
-grid_origin = [21.78401,  -0.527997,  9.276]
-grid_deltas = [[3.163917, 0, 0], [0, 3.340531, 0], [0, 0, 3.165094]]
-grid_counts = (97, 97, 97)
+grid_origin, grid_deltas, grid_counts = parse_dx_file(f"/Users/Desktop/{molecule}_map.dx")
 data = data_array  
 query_points = sphere_coordinates
 
