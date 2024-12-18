@@ -1,8 +1,7 @@
 import os
 import numpy as np
-from typing import List, TextIO
+from typing import List, Optional, TextIO
 
-import numpy as np
 def get_transformation_to_C0(base_point: np.ndarray, axis_point: np.ndarray):
     """Get transformation matrices to align cylinder with z-axis."""
     # Get cylinder axis vector
@@ -75,8 +74,6 @@ def write_pointcloud_to_pdb(points: np.ndarray, output_file: str,
     
     print(f"Wrote {output_file}")
 
-import numpy as np
-
 def get_transformation_to_C0(base_point: np.ndarray, axis_point: np.ndarray):
     """Get transformation matrices to align cylinder with z-axis."""
     axis = axis_point - base_point
@@ -145,35 +142,68 @@ def filter_points_half_cylinder(points: np.ndarray, ptc_pt: np.ndarray,
     # Using dot product with normal to determine side
     vectors_to_points = cylinder_points - ptc_pt
     side_of_plane = np.dot(vectors_to_points, normal)
-    half_mask = side_of_plane >= 0
+    half_mask = side_of_plane <0
     
     return cylinder_points[half_mask]
 
-def write_pointcloud_to_mmcif(points: np.ndarray, output_file: str):
-    """Write filtered points to minimal mmCIF format."""
+def write_multiple_pointclouds_to_mmcif(point_clouds: List[np.ndarray], 
+                                      output_file: str,
+                                      chain_ids: Optional[List[str]] = None):
+    """
+    Write multiple point clouds to mmCIF format, each as a separate chain.
+    
+    Args:
+        point_clouds: List of Nx3 numpy arrays containing point coordinates
+        output_file: Path to output mmCIF file
+        chain_ids: Optional list of chain identifiers. If None, uses A, B, C, etc.
+    """
+    if chain_ids is None:
+        chain_ids = [chr(65 + i) for i in range(len(point_clouds))]  # A, B, C, etc.
+    
+    if len(chain_ids) != len(point_clouds):
+        raise ValueError("Number of chain IDs must match number of point clouds")
+    
     with open(output_file, 'w') as f:
         f.write("data_points\n")
         f.write("#\n")
         f.write("loop_\n")
         f.write("_atom_site.id\n")
         f.write("_atom_site.type_symbol\n")
+        f.write("_atom_site.label_atom_id\n")
+        f.write("_atom_site.label_comp_id\n")
+        f.write("_atom_site.label_asym_id\n")
         f.write("_atom_site.Cartn_x\n")
         f.write("_atom_site.Cartn_y\n")
         f.write("_atom_site.Cartn_z\n")
         
-        for i, (x, y, z) in enumerate(points, 1):
-            f.write(f"{i} C {x:.3f} {y:.3f} {z:.3f}\n")
+        atom_id = 1
+        for points, chain_id in zip(point_clouds, chain_ids):
+            for x, y, z in points:
+                f.write(f"{atom_id} C CA GLY {chain_id} {x:.3f} {y:.3f} {z:.3f}\n")
+                atom_id += 1
 
-def convert_pointcloud_to_halfslice_mmcif(points: np.ndarray, output_file: str,
-                                        ptc_pt: np.ndarray, constriction_pt: np.ndarray,
-                                        radius: float, height: float, angle: float):
-    """Main function to filter points and convert to mmCIF."""
-    filtered_points = filter_points_half_cylinder(points, ptc_pt, constriction_pt,
-                                                radius, height, angle)
+def convert_pointclouds_to_halfslice_mmcif(
+                                        point_clouds: List[np.ndarray], 
+                                         output_file: str,
+                                         ptc_pt: np.ndarray, 
+                                         constriction_pt: np.ndarray,
+                                         radius: float, 
+                                         height: float, 
+                                         angle: float,
+                                         chain_ids: Optional[List[str]] = None):
+    """
+    Filter multiple point clouds and convert to mmCIF with separate chains.
+    """
+    # Filter each point cloud
+    filtered_clouds = []
+    for i, points in enumerate(point_clouds):
+        filtered = filter_points_half_cylinder(points, ptc_pt, constriction_pt, radius, height, angle)
+        filtered_clouds.append(filtered)
+        print(f"Cloud {i}: Kept {len(filtered)}/{len(points)} points after filtering")
     
-    print(f"Kept {len(filtered_points)}/{len(points)} points after filtering")
-    write_pointcloud_to_mmcif(filtered_points, output_file)
-    print(f"Wrote filtered points to {output_file}")
+    # Write to mmCIF
+    write_multiple_pointclouds_to_mmcif(filtered_clouds, output_file, chain_ids)
+    print(f"Wrote filtered point clouds to {output_file}")
 
 # Example usage:
 if __name__ == "__main__":
@@ -183,7 +213,22 @@ if __name__ == "__main__":
     angle = 45  # degrees
     ptc_pt = np.array([0, 0, 0])
     constriction_pt = np.array([0, 0, 100])
-    points = np.random.rand(1000, 3) * 200 - 100
     
-    convert_pointcloud_to_halfslice_mmcif(points, "half_cylinder_points.cif",
-                                        ptc_pt, constriction_pt, R, H, angle)
+    # Create some example point clouds
+    cloud1 = np.random.rand(1000, 3) * 200 - 100
+    cloud2 = np.random.rand(800, 3) * 200 - 100
+    cloud3 = np.random.rand(1200, 3) * 200 - 100
+    
+    point_clouds = [cloud1, cloud2, cloud3]
+    chain_ids = ['A', 'B', 'C']  # Optional custom chain IDs
+    
+    convert_pointclouds_to_halfslice_mmcif(
+        point_clouds,
+        "multi_clouds.cif",
+        ptc_pt,
+        constriction_pt,
+        R,
+        H,
+        angle,
+        chain_ids
+    )

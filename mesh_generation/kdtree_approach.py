@@ -13,7 +13,7 @@ data_dir = os.getenv('DATA_DIR')
 
 sys.dont_write_bytecode = True
 import pyvista as pv
-from dbscan_to_pdb import  convert_pointcloud_to_halfslice_mmcif, write_pointcloud_to_pdb, write_pointcloud_to_mmcif
+from dbscan_to_pdb import convert_pointclouds_to_halfslice_mmcif
 from mesh_generation.mesh_visualization import (
     visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs,
     visualize_mesh,
@@ -302,20 +302,18 @@ def create_tunnel_mesh(RCSB_ID:str):
     PR_depth    = 6
     PR_ptweight = 3
 
-    db, clusters_container = DBSCAN_capture(
-        empty_in_world_coords, _u_EPSILON_initial_pass, _u_MIN_SAMPLES_initial_pass
-    )
+    db, clusters_container = DBSCAN_capture( empty_in_world_coords, _u_EPSILON_initial_pass, _u_MIN_SAMPLES_initial_pass )
     #! [ Extract the largest cluster from the DBSCAN clustering ]
-    largest_cluster = DBSCAN_pick_largest_cluster(clusters_container)
+    largest_cluster, largest_cluster_id = DBSCAN_pick_largest_cluster(clusters_container)
     # visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs( clusters_container, _u_EPSILON_initial_pass, _u_MIN_SAMPLES_initial_pass, ptc_pt, constriction_pt, np.array([[1,1,1]]))
     # exit()
     db, refined_clusters_container = DBSCAN_capture( largest_cluster, _u_EPSILON_refinement, _u_MIN_SAMPLES_refinement )
-    refined = DBSCAN_pick_largest_cluster(refined_clusters_container)
+    refined_cluster, refined_cluster_id = DBSCAN_pick_largest_cluster(refined_clusters_container)
 
 
-    noise = np.array( clusters_container[-1] )
-    print(noise.shape)
-    visualize_pointcloud(noise)
+    # noise = np.array( clusters_container[-1] )
+    # print(noise.shape)
+    # visualize_pointcloud(noise)
     # # write_point_clouds_to_pdb([noise], assets.dbscan_clusters_PDB)
     # write_pointcloud_to_mmcif(noise          , StructureAssets(data_dir, RCSB_ID).dbscan_clusters_mmcif_noise  )
     # write_pointcloud_to_mmcif(refined        , StructureAssets(data_dir, RCSB_ID).dbscan_clusters_mmcif_refined)
@@ -328,9 +326,16 @@ def create_tunnel_mesh(RCSB_ID:str):
     # write_pointcloud_to_xyz(refined        , StructureAssets(data_dir, RCSB_ID).dbscan_clusters_xyz_refined)
     # write_pointcloud_to_xyz(largest_cluster, StructureAssets(data_dir, RCSB_ID).dbscan_clusters_xyz_largest)
 
-    convert_pointcloud_to_halfslice_mmcif(noise          , StructureAssets(data_dir, RCSB_ID).dbscan_clusters_xyz_noise  .split('.xyz')[0]+'_halfslice.cif',ptc_pt,constriction_pt,R,H,45)
-    convert_pointcloud_to_halfslice_mmcif(refined        , StructureAssets(data_dir, RCSB_ID).dbscan_clusters_xyz_refined.split('.xyz')[0]+'_halfslice.cif',ptc_pt,constriction_pt,R,H,45)
-    convert_pointcloud_to_halfslice_mmcif(largest_cluster, StructureAssets(data_dir, RCSB_ID).dbscan_clusters_xyz_largest.split('.xyz')[0]+'_halfslice.cif',ptc_pt,constriction_pt,R,H,45)
+    # convert_pointcloud_to_halfslice_mmcif(noise          , StructureAssets(data_dir, RCSB_ID).dbscan_clusters_xyz_noise  .split('.xyz')[0]+'_halfslice.cif',ptc_pt,constriction_pt,R,H,45)
+    # convert_pointcloud_to_halfslice_mmcif(refined        , StructureAssets(data_dir, RCSB_ID).dbscan_clusters_xyz_refined.split('.xyz')[0]+'_halfslice.cif',ptc_pt,constriction_pt,R,H,45)
+    # convert_pointcloud_to_halfslice_mmcif(largest_cluster, StructureAssets(data_dir, RCSB_ID).dbscan_clusters_xyz_largest.split('.xyz')[0]+'_halfslice.cif',ptc_pt,constriction_pt,R,H,45)
+
+    # auxilary_clusters = list(map(np.array, list(clusters_container.values())))
+    # print("cluster before fitl", len(clusters_container))
+    # without_largest_or_noise = list(filter(lambda x: x[0]!= largest_cluster_id and x[0] != -1, clusters_container.items()))
+    # print("cluster after fitl", len(without_largest_or_noise))
+    # auxilary_clusters = list(map(lambda x: np.array(x[1]), without_largest_or_noise))
+    # convert_pointclouds_to_halfslice_mmcif(auxilary_clusters,StructureAssets(data_dir, RCSB_ID).dbscan_clusters_xyz_noise.split('.xyz')[0]+'_all_clusters_halfslice.cif',ptc_pt,constriction_pt,R,H,45)
    
     # print('wrote xyz')
 
@@ -356,7 +361,7 @@ def create_tunnel_mesh(RCSB_ID:str):
     )
 
     #! [ Transform the cluster back into original coordinate frame ]
-    surface_pts = ptcloud_convex_hull_points(refined, d3d_alpha, d3d_tol)
+    surface_pts = ptcloud_convex_hull_points(refined_cluster, d3d_alpha, d3d_tol)
     visualize_pointcloud(surface_pts, RCSB_ID)
 
     #! [ Transform the cluster back into Original Coordinate Frame ]

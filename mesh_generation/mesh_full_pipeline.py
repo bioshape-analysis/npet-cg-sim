@@ -58,7 +58,7 @@ def DBSCAN_capture(
     CLUSTERS_CONTAINER = dict(sorted(CLUSTERS_CONTAINER.items()))
     return db, CLUSTERS_CONTAINER
 
-def DBSCAN_pick_largest_cluster(clusters_container:dict[int,list], pick_manually:bool=False)->np.ndarray:
+def DBSCAN_pick_largest_cluster(clusters_container:dict[int,list], pick_manually:bool=False)->tuple[np.ndarray, int]:
     DBSCAN_CLUSTER_ID = 0
     # if pick_manually:
     #     print("-------------------------------")
@@ -82,7 +82,7 @@ def DBSCAN_pick_largest_cluster(clusters_container:dict[int,list], pick_manually
             continue
         elif len(v) > len(clusters_container[DBSCAN_CLUSTER_ID]):
             DBSCAN_CLUSTER_ID = int(k)
-    return np.array(clusters_container[DBSCAN_CLUSTER_ID])
+    return np.array(clusters_container[DBSCAN_CLUSTER_ID]), DBSCAN_CLUSTER_ID
 
 # def cache_trimming_parameters( RCSB_ID:str, trim_tuple:list, file_path=TRIMMING_PARAMS_DICT_PATH):
 #     if not os.path.exists(file_path):
