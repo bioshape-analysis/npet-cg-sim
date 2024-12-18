@@ -340,13 +340,11 @@ def create_tunnel_mesh(RCSB_ID:str):
     # print('wrote xyz')
 
 
-    exit()
     # refined, largest_cluster, noise
 
     # print("Shape of refined:", refined.shape)
     # print("Shape of largest:", largest_cluster.shape)
     # print("Shape of noise:", noise.shape)
-    exit()
 
 
     visualize_DBSCAN_CLUSTERS_particular_eps_minnbrs(
@@ -355,7 +353,7 @@ def create_tunnel_mesh(RCSB_ID:str):
         _u_MIN_SAMPLES_initial_pass,
         ptc_pt,
         constriction_pt,
-        refined,
+        refined_cluster,
         R,
         H,
     )
