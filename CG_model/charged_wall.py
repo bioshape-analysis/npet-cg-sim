@@ -103,7 +103,7 @@ def interpolate_spline(grid_origin, grid_deltas, grid_counts, data, query_points
     data_reshaped = np.array(data).reshape(grid_counts)
     
     # Create the interpolator
-    interpolator = RegularGridInterpolator(axes, data_reshaped, method='linear', bounds_error=False, fill_value=None)
+    interpolator = RegularGridInterpolator(axes, data_reshaped, method='cubic', bounds_error=False, fill_value=None)
     
     # Interpolate at the desired points
     interpolated_values = interpolator(query_points)
