@@ -206,6 +206,7 @@ diagram_tunnels = {
     "archaea": ["4V6U",  # GOOD
                 "4V9F",] # GOOD
 }
+
 FONT                  = 'courier'
 CHAIN_PT_SIZE         = 8
 PTC_PT_SIZE           = 40

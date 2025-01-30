@@ -91,7 +91,7 @@ def produce_alpha_contour(RCSB_ID, alpha):
 
     print("Constructing alpha shape with a={}".format(alpha))
     alpha_shape = alphashape.alphashape(point_cloud, alpha)
-    alpha_shape.show()
+    # alpha_shape.show()
 
     components = alpha_shape.split(only_watertight=False)  # Get all components
     alpha_shape_largest = max(components, key=lambda c: abs(c.volume))
@@ -100,7 +100,7 @@ def produce_alpha_contour(RCSB_ID, alpha):
     print("Resampling {} points on initial alphashape M.".format(num_samples))
     new_points = sample_within_alpha_shape(alpha_shape_largest, num_samples)
     alpha_shape_renew = alphashape.alphashape(new_points, alpha)
-    alpha_shape_renew.show()
+    # alpha_shape_renew.show()
 
     save_alpha_shape_as_ply(alpha_shape_renew, assets.ashape_watertight)
     print("Saved to {}".format(assets.ashape_watertight))
