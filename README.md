@@ -1,13 +1,18 @@
 # Nascent Peptide Exit Tunnel (NPET) Coarse Grained simulation protocol
 
-This is a satelite repo for the paper [Advanced coarse-grained model of the ribosome exit tunnel for fast simulation of the nascent polypeptide chain dynamics](#citation_url).
+This is a satelite repo for the paper [Advanced coarse-grained model of the ribosome exit tunnel for fast simulation of the nascent polypeptide chain dynamics](#biophys_url_to_be_added).
 
 ## Installation
 
 
-Note: `python3.11` is the latest version that is supported (this is solely due to `open3d` dep.) 
-pip install -r reqs.txt
-Compile the Poisson Surface reconstruction binary from here https://github.com/mkazhdan/PoissonRecon 
+Note: `python3.11` is the latest version that is supported (this is solely due to `open3d` dependency) .
+
+
+```
+pip install -r requirements.txt
+```
+
+Compile the Poisson Surface reconstruction binary from here: https://github.com/mkazhdan/PoissonRecon 
 
 
 ## Environment
@@ -18,24 +23,16 @@ Compile the Poisson Surface reconstruction binary from here https://github.com/m
 You may copy `.env.example` to `.env` and modify the variables to suit your setup.
 
 
-`DATA_DIR` layout is as follows:
+## Usage
+
+The main `driver.py` is the entry cli to the mesh generation utilities:
 ```
+# to produce interior tunnel mesh of the 4UG0 ribosome structure
+python driver.py mesh mesh_create 4UG0
+
+# to produce an alphashape-like contour of the 4UG0 ribosome structure
+python driver.py alpha  4UG0
 ```
 
-----------------------------------
-### Layout prototype during development:
 
-```
-.
-├── README.md
-├── lammps_workflow
-│   └── Shiqi's LAMMPS workflow
-├── alpha_shape 
-│   └── Wenjun's alpha shape code
-├── mesh_generation
-│   └── Artem mesh gen code
-├── data             
-├── examples
-├── cli.py 
-└──requirements.txt
-```
+
