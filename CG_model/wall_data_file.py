@@ -69,6 +69,23 @@ def parse_stl(stl_file):
 
     return vertices, normals, new_points, centroids, normalized_vectors
 
+def parse_sphere(stl_file):
+    # Load the STL file
+    mesh_data = mesh.Mesh.from_file(stl_file)
+
+    # Extract vertices and faces
+    vertices = mesh_data.vectors  # Keep vectors grouped as triangles
+    normals = mesh_data.normals  # Extract normals
+    #print(normals)
+    
+    # Compute centroids of each triangle
+    centroids = np.mean(vertices, axis=1)
+    norm = np.linalg.norm(normals, axis=1, keepdims=True)  # Compute the norm for each normal vector individually
+    normalized_vectors = normals / norm  # Normalize the normals
+
+    new_points = centroids
+
+    return vertices, normals, new_points, centroids, normalized_vectors
     
 def compute_vertex_normals_from_stl(stl_file):
     """
@@ -176,6 +193,8 @@ scene = a3d.Scene.from_file(f"/Users/Desktop/{molecule}_tunnel.ply")
 scene.save(f"/Users/Desktop/{molecule}_tunnel.stl")
 
 vertices, normals, new_points, centroids, normalized_vector = parse_stl(f'/Users/Desktop/{molecule}_tunnel.stl')
+
+vertices, normals, new_points, centroids, normalized_vector = parse_sphere(f'/Users/Desktop/{molecule}_sphere.stl')
 
 # Append formatted coordinates to the output file
 output_filename = f'/Users/Desktop/data.tunnel' 
