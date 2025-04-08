@@ -34,9 +34,15 @@ python driver.py mesh mesh_create 4UG0
 python driver.py alpha  4UG0
 ```
 
-File "wall_data_file.py" in the "CG_model" folder illustrates the steps to place the CG beads on the mesh structures of the tunnel and ribosome
+To place the CG beads on the mesh structures of the tunnel and ribosome, follow the steps in 
+```
+"wall_data_file.py" in the "CG_model" folder
+```
 
-File "charged_wall.py" in the "CG_model" folder illustrates the steps to map the effective charges onto the CG beads of the tunnel and ribsome
+To map effective charges onto the CG beads of the tunnel and ribosome, follow the steps in 
+```
+"charged_wall.py" in the "CG_model" folder 
+```
 
 Two in.files in the "CG_model/LAMMPS/refinement" folder should be read sequentially by LAMMPS to reduce the size of the simulation system by removing overlapping CG beads:
 ```
