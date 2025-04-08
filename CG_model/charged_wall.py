@@ -2,8 +2,8 @@ import re
 
 # Parameters
 epsilon_0 = 8.854*10**-12 #F/m
-epsilon_rel = 40  #average value of protein, rna, and water 
-lamda_d = 3
+epsilon_rel = 7  #average value of protein, rna, and water 
+lamda_d = 7.15
 
 # Some useful functions
 
@@ -245,7 +245,7 @@ for i in range (len(wall_coordinates)):
 # Assign effective charges to each tunnel wall particle according to the effective Coulomb potentials
 q_effect = []
 for i in range (len(V_wall)):
-    q_e = V_wall[i]*8*np.pi*epsilon_0*5*3.5*10**-10/(3*(1.6*10**-19)) # Assunmption for tunnel wall particles only
+    q_e = V_wall[i]*proportionality # Assunmption for tunnel wall particles only, need to assign a proportionality value
     q_effect.append(q_e)
 
 
@@ -298,6 +298,7 @@ with open(f"/Users/Desktop/data.{molecule}_tunnel_new", "r") as infile, open(f"/
     outfile.writelines(output_lines)
 
 print("File has been processed and saved as 'output_file.txt', need futher manipulate modify")
+
 # Be aware that the new data file need to be mannually modifed a bit. 
 # The atom type should be changed to 1 and a blank line need to be added after the line "Atoms # full"
 
@@ -355,7 +356,7 @@ interpolated_values = interpolate_spline(grid_origin, grid_deltas, grid_counts, 
 V_sphere = interpolated_values
 q_sphere = []
 for i in range (len(V_sphere)):
-    q_e = V_sphere[i]*8*np.pi*epsilon_0*0.5*3.5*10**-10/(3*(1.6*10**-19)) # Assunmption for ribosome surface wall particles only
+    q_e = V_sphere[i]*proportionality # Assunmption for ribosome surface wall particles only, need to assign a value for proportionality
     q_sphere.append(q_e)
 
 
