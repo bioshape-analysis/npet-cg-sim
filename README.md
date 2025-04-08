@@ -36,12 +36,14 @@ python driver.py alpha  4UG0
 
 To place the CG beads on the mesh structures of the tunnel and ribosome, follow the steps in 
 ```
-"wall_data_file.py" in the "CG_model" folder
+# under the "CG_model" folder
+`wall_data_file.py`
 ```
 
 To map effective charges onto the CG beads of the tunnel and ribosome, follow the steps in 
 ```
-"charged_wall.py" in the "CG_model" folder 
+# under the "CG_model" folder
+`charged_wall.py`
 ```
 
 Two in.files in the "CG_model/LAMMPS/refinement" folder should be read sequentially by LAMMPS to reduce the size of the simulation system by removing overlapping CG beads:
