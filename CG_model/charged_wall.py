@@ -2,8 +2,8 @@ import re
 
 # Parameters
 epsilon_0 = 8.854*10**-12 #F/m
-epsilon_rel = 40  #average value of protein, rna, and water 
-lamda_d = 3
+epsilon_rel = 7  #average value of protein, rna, and water 
+lamda_d = 7.14
 
 # Some useful functions
 
