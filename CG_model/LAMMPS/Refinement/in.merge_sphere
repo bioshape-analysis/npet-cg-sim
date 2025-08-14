@@ -43,11 +43,9 @@ group tunnel type 1
 
 group sphere type 2
 
-delete_atoms overlap 1.75 tunnel tunnel   # cutoff value can be modified
+delete_atoms overlap 2 sphere sphere   # cutoff value can be modified
 
-delete_atoms overlap 1.75 sphere sphere   # cutoff value can be modified
-
-delete_atoms overlap 3.5 sphere tunnel    # cutoff value can be modified
+delete_atoms overlap 2.4 sphere tunnel    # cutoff value can be modified
 
 reset_atoms id sort yes
 
@@ -70,11 +68,13 @@ min_style       sd
 
 minimize        1.0e-8 1.0e-6 1000 1000
 
+fix         1   sphere nvt temp 300 300 10
+dump        1   sphere atom 1000 sphere.lammpstrj
 
 run         5000                   
 
 
-write_data data.4UG0_sphere_new
+write_data data.4UG0_sphere_new pair ij
 
 
 clear
