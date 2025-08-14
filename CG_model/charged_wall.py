@@ -1,4 +1,14 @@
 import re
+import numpy as np
+from scipy.interpolate import RegularGridInterpolator
+import matplotlib.pyplot as plt
+from scipy.spatial.distance import cdist
+
+proportionality = 0.5 # Proportionality constant for effective charge calculation, needs to be estimated
+
+# Replace the following
+molecule = '4UG0'
+path = '/Path/To/Data/'  # Path to data files, needs to be set
 
 # Parameters
 epsilon_0 = 8.854*10**-12 #F/m
@@ -15,7 +25,7 @@ def potential(distance,charge):
     return V_charge
 
 def calculate_distance(point1, point2):
-     """Calculate Euclidean distance between two 3D points."""
+    """Calculate Euclidean distance between two 3D points."""
     p1 = np.array(point1)
     p2 = np.array(point2)
     distance = np.linalg.norm(p2 - p1)
@@ -137,16 +147,212 @@ def parse_dx_file(dx_file):
 
     return grid_origin, grid_deltas, grid_counts
     
+# Functions for charge comaprison
+
+def calculate_centerline_potentials(centerline_coords, charge_coords, charges, 
+                                    lamda_d, epsilon_0, epsilon_rel):
+    """
+    Calculate electrostatic potential at each centerline point due to charged particles.
+    
+    Parameters:
+    -----------
+    centerline_coords : array-like, shape (n_points, 3)
+        Coordinates of centerline points
+    charge_coords : array-like, shape (n_charges, 3)
+        Coordinates of charged particles (atoms or beads)
+    charges : array-like, shape (n_charges,)
+        Charge values for each particle
+    max_distance : float
+        Maximum distance to consider for potential calculations (Angstroms)
+    
+    Returns:
+    --------
+    potentials : array, shape (n_points,)
+        Electrostatic potential at each centerline point
+    """
+    centerline_coords = np.array(centerline_coords)
+    charge_coords = np.array(charge_coords)
+    charges = np.array(charges)
+    
+    n_centerline_points = len(centerline_coords)
+    potentials = np.zeros(n_centerline_points)
+    
+    # Calculate distances between all centerline points and all charged particles
+    distances = cdist(centerline_coords, charge_coords, metric='euclidean')
+    
+    for i in range(n_centerline_points):
+        q = 0
+        for j in range(len(charges)):
+            dist = distances[i,j]
+            pot = potential(dist, charges[j], lamda_d, epsilon_0, epsilon_rel)
+            q += pot
+
+        potentials[i] = q
+        
+    return potentials
+
+def fit_straight_line_and_project(centerline_coords):
+    """
+    Fit a straight line between the first and last centerline points,
+    then project all centerline points onto this line.
+    
+    Parameters:
+    -----------
+    centerline_coords : array-like, shape (n_points, 3)
+        Coordinates of centerline points
+    
+    Returns:
+    --------
+    distances : array, shape (n_points,)
+        Distance along the straight line from start to each projected point
+    line_start : array, shape (3,)
+        Start point of the fitted line
+    line_direction : array, shape (3,)
+        Unit direction vector of the line
+    """
+    centerline_coords = np.array(centerline_coords)
+    
+    # Define straight line from first to last point
+    line_start = centerline_coords[0]
+    line_end = centerline_coords[-1]
+    line_vector = line_end - line_start
+    line_length = np.linalg.norm(line_vector)
+    line_direction = line_vector / line_length  # Unit vector
+    
+    # Project each centerline point onto the straight line
+    distances = np.zeros(len(centerline_coords))
+    for i, point in enumerate(centerline_coords):
+        # Vector from line start to current point
+        point_vector = point - line_start
+        # Project onto line direction (dot product gives distance along line)
+        distances[i] = np.dot(point_vector, line_direction)
+    
+    return distances, line_start, line_direction
+
+def compare_charge_distributions(centerline_coords, atom_coords, atom_charges, 
+                               bead_coords, bead_charges, lamda_d, epsilon_0, epsilon_rel):
+    """
+    Compare atomistic and coarse-grained charge distributions along centerline.
+    Calculates potentials at true centerline coordinates, then projects onto straight line.
+    
+    Parameters:
+    -----------
+    centerline_coords : array-like, shape (500, 3)
+        Coordinates of 500 centerline points
+    atom_coords : array-like, shape (n_atoms, 3)
+        Coordinates of charged atoms near centerline
+    atom_charges : array-like, shape (n_atoms,)
+        Charges of atoms from PyMOL
+    bead_coords : array-like, shape (n_beads, 3)
+        Coordinates of coarse-grained beads
+    bead_charges : array-like, shape (n_beads,)
+        Charges of coarse-grained beads
+    max_distance : float
+        Maximum distance for potential calculations (Angstroms)
+    
+    Returns:
+    --------
+    centerline_distance : array
+        Distance parameter along straight line projection
+    atomistic_potentials : array
+        Potential profile from atomistic charges
+    cg_potentials : array
+        Potential profile from coarse-grained charges
+    """
+    
+    atomistic_potentials = calculate_centerline_potentials(
+        centerline_coords, atom_coords, atom_charges, lamda_d, epsilon_0, epsilon_rel
+    )
+    
+    cg_potentials = calculate_centerline_potentials(
+        centerline_coords, bead_coords, bead_charges, lamda_d, epsilon_0, epsilon_rel
+    )
+    
+    centerline_distance, line_start, line_direction = fit_straight_line_and_project(centerline_coords)
+    
+    return centerline_distance, atomistic_potentials, cg_potentials
+
+
+def plot_comparison(centerline_distance, atomistic_potentials, cg_potentials, proportionality,
+                   save_path=None):
+    """
+    Create comparison plot of atomistic vs coarse-grained potentials.
+    
+    Parameters:
+    -----------
+    centerline_distance : array
+        Distance parameter along centerline (Angstroms)
+    atomistic_potentials : array
+        Potential profile from atomistic charges
+    cg_potentials : array
+        Potential profile from coarse-grained charges
+    save_path : str, optional
+        Path to save the plot
+    """
+    
+    plt.figure(figsize=(12, 8))
+    
+    plt.plot(centerline_distance, atomistic_potentials, 'b-', 
+             linewidth=2, label='Atomistic (PyMOL)', alpha=0.8)
+    plt.plot(centerline_distance, cg_potentials, 'r--', 
+             linewidth=2, label='Coarse-Grained', alpha=0.8)
+    
+    plt.xlabel('Distance along centerline (Å)', fontsize=12)
+    plt.ylabel('Electrostatic Potential (mV)', fontsize=12)
+    plt.title(f'Comparison of Charge Distributions Along Centerline (prop = {proportionality})', fontsize=14)
+    plt.legend(fontsize=11)
+    plt.grid(True, alpha=0.3)
+    
+    correlation = np.corrcoef(atomistic_potentials, cg_potentials)[0, 1]
+    rmse = np.sqrt(np.mean((atomistic_potentials - cg_potentials)**2))
+    
+    textstr = f'Correlation: {correlation:.3f}\nRMSE: {rmse:.2e} mV'
+    props = dict(boxstyle='round', facecolor='wheat', alpha=0.8)
+    plt.text(0.02, 0.98, textstr, transform=plt.gca().transAxes, fontsize=10,
+             verticalalignment='top', bbox=props)
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Plot saved to: {save_path}")
+    
+    plt.show()
+    
+
+def get_charged_atoms(pos_coordinates, neg_coordinates, pho_coordinates):
+    """
+    Collect charged atom coordinates.
+    
+    Parameters:
+    -----------
+    pos_coordinates : list of 3D coordinates of positively charged atoms
+    neg_coordinates : list of 3D coordinates of negatively charged atoms
+    pho_coordinates : list of 3D coordinates of phosphate groups
+    
+    Returns:
+    --------
+    all_atom : array of shape (n_atoms, 3)
+        Combined coordinates of all charged atoms
+    charges : array of shape (n_atoms,)
+        Charge values for each atom (1 for positive, -1 for negative)
+    """
+    all_atom = np.concatenate((pos_coordinates, neg_coordinates, pho_coordinates))
+    
+    charges = np.ones(all_atom.shape[0])
+    
+    charges[len(pos_coordinates):] = -1 * np.ones(all_atom.shape[0] - len(pos_coordinates))
+    
+    return all_atom, charges
+
 
 # 1. Example usage (for tunnel wall particles only)
 
-molecule = '4UG0'
-
-# Store the coordinates of positively charged resdiues within 50 angstrom from the tunnel centerline derived from PyMOL
+# Store the coordinates of positively charged resdiues within 30 angstrom from the tunnel centerline derived from PyMOL
 pos_coordinates = []
 
 # Read and process the file
-with open(f'/Users/Desktop/50_pos_{molecule}.txt', 'r') as file:
+with open(f'{path}/30_pos_{molecule}.txt', 'r') as file:
     coordinates = []
     for line in file:
         cleaned_line = re.sub(r"\\", "", line).strip()
@@ -156,11 +362,11 @@ with open(f'/Users/Desktop/50_pos_{molecule}.txt', 'r') as file:
 # Remove duplicate coordinates
 pos_coordinates = list(map(list, set(coordinates)))
 
-# Store the coordinates of negatively charged resdiues within 50 angstrom from the tunnel centerline derived from PyMOL
+# Store the coordinates of negatively charged resdiues within 30 angstrom from the tunnel centerline derived from PyMOL
 neg_coordinates = []
 
 # Read and process the file
-with open(f'/UsersDesktop/50_neg_{molecule}.txt', 'r') as file:
+with open(f'{path}/30_neg_{molecule}.txt', 'r') as file:
     coordinates = []
     for line in file:
         cleaned_line = re.sub(r"\\", "", line).strip()
@@ -171,11 +377,11 @@ with open(f'/UsersDesktop/50_neg_{molecule}.txt', 'r') as file:
 neg_coordinates = list(map(list, set(coordinates)))
 print(len(neg_coordinates),neg_coordinates[0])
 
-# Store the coordinates of negatively charged phosphorus atoms within 50 angstrom from the tunnel centerline derived from PyMOL
+# Store the coordinates of negatively charged phosphorus atoms within 30 angstrom from the tunnel centerline derived from PyMOL
 pho_coordinates = []
 
 # Read and process the file
-with open(f'/Users/Desktop/50_phos_{molecule}.txt', 'r') as file:
+with open(f'{path}/30_phos_{molecule}.txt', 'r') as file:
     coordinates = []
     for line in file:
         cleaned_line = re.sub(r"\\", "", line).strip()
@@ -186,6 +392,8 @@ with open(f'/Users/Desktop/50_phos_{molecule}.txt', 'r') as file:
 pho_coordinates = list(map(list, set(coordinates)))
 print(len(pho_coordinates),pho_coordinates[0])
 
+################################### Read refined lammps tunnel data file ########################################
+
 # Read the tunnel wall particle coordinates (new data file generated by LAMMPS after removing overlapping particles)
 wall_coordinates = []
 atom_ids = []
@@ -194,7 +402,7 @@ atom_ids = []
 in_target_section = False
 
 # Read the file line by line
-with open(f"/Users/Desktop/data.{molecule}_tunnel_new", "r") as file:
+with open(f"{path}/data.{molecule}_tunnel_new", "r") as file:
     for line in file:
 
         # Strip whitespace from the beginning and end
@@ -224,6 +432,8 @@ with open(f"/Users/Desktop/data.{molecule}_tunnel_new", "r") as file:
 print("Atom IDs:", len(atom_ids), atom_ids[0])
 print("3D Coordinates:", len(wall_coordinates), wall_coordinates[0])
 
+################################### calculate potentials for wall beads ########################################
+
 # Calculate the effective Coulomb potential at each wall particle
 V_wall = []
 for i in range (len(wall_coordinates)):
@@ -245,12 +455,14 @@ for i in range (len(wall_coordinates)):
 # Assign effective charges to each tunnel wall particle according to the effective Coulomb potentials
 q_effect = []
 for i in range (len(V_wall)):
-    q_e = V_wall[i]*proportionality # Assunmption for tunnel wall particles only, need to assign a proportionality value
+    q_e = V_wall[i]*proportionality # Assumption for tunnel wall particles only, need to assign a proportionality value above
     q_effect.append(q_e)
 
 
 # Generate a new data file for tunnel wall particles with effective charges
 atom_charge_map = dict(zip(atom_ids, q_effect))
+
+################### write new tunnel data lammps file including effective charges #######################
 
 output_lines = []
 
@@ -258,7 +470,7 @@ output_lines = []
 in_target_section = False
 
 # Open the file to read and the output file to write
-with open(f"/Users/Desktop/data.{molecule}_tunnel_new", "r") as infile, open(f"/Users/Desktop/data.{molecule}_tunnel_charged", "w") as outfile:
+with open(f"{path}/data.{molecule}_tunnel_new", "r") as infile, open(f"{path}/data.{molecule}_tunnel_charged", "w") as outfile:
     for line in infile:
         stripped_line = line.strip()
 
@@ -297,7 +509,7 @@ with open(f"/Users/Desktop/data.{molecule}_tunnel_new", "r") as infile, open(f"/
     # Write all lines up to 'Velocity' to the output file
     outfile.writelines(output_lines)
 
-print("File has been processed and saved as 'output_file.txt', need futher manipulate modify")
+print(f"File has been processed and saved as 'data.{molecule}_tunnel_charged', need futher modification")
 
 # Be aware that the new data file need to be mannually modifed a bit. 
 # The atom type should be changed to 1 and a blank line need to be added after the line "Atoms # full"
@@ -313,7 +525,7 @@ atom_ids = []
 in_target_section = False
 
 # Read the file line by line
-with open("/Users/Desktop/data.{molecule}_sphere_new", "r") as file:
+with open(f"{path}/data.{molecule}_sphere_new", "r") as file:
     for line in file:
         # Strip whitespace from the beginning and end
         line = line.strip()
@@ -343,10 +555,10 @@ print("Atom IDs:", len(atom_ids), atom_ids[0])
 print("3D Coordinates:", len(sphere_coordinates),sphere_coordinates[0])
 
 # Read the calculated potentials along the ribosome surface obtained from APBS
-grid_positions, data_array, matched_data = parse_opendx(f"/Users/Desktop/{molecule}_map.dx")
+grid_positions, data_array, matched_data = parse_opendx(f"{path}/{molecule}_map.dx")
 
 # Calculate the interpolated potentials at the ribosome surface wall particle coordinates
-grid_origin, grid_deltas, grid_counts = parse_dx_file(f"/Users/Desktop/{molecule}_map.dx")
+grid_origin, grid_deltas, grid_counts = parse_dx_file(f"{path}/{molecule}_map.dx")
 data = data_array  
 query_points = sphere_coordinates
 
@@ -356,7 +568,7 @@ interpolated_values = interpolate_spline(grid_origin, grid_deltas, grid_counts, 
 V_sphere = interpolated_values
 q_sphere = []
 for i in range (len(V_sphere)):
-    q_e = V_sphere[i]*proportionality # Assunmption for ribosome surface wall particles only, need to assign a value for proportionality
+    q_e = V_sphere[i]*proportionality # Uses same proportionality as for tunnel
     q_sphere.append(q_e)
 
 
@@ -369,7 +581,7 @@ output_lines = []
 in_target_section = False
 
 # Open the file to read and the output file to write
-with open(f"/Users/Desktop/data.{molecule}_sphere_new", "r") as infile, open(f"/Users/Desktop/data.{molecule}_sphere_charged", "w") as outfile:
+with open(f"{path}/data.{molecule}_sphere_new", "r") as infile, open(f"{path}/data.{molecule}_sphere_charged", "w") as outfile:
     for line in infile:
         stripped_line = line.strip()
 
@@ -414,6 +626,24 @@ with open(f"/Users/Desktop/data.{molecule}_sphere_new", "r") as infile, open(f"/
     # Write all lines up to 'Velocity' to the output file
     outfile.writelines(output_lines)
 
-print("File has been processed and saved as 'output_file.txt', need futher manipulate modify")
+print(f"File has been processed and saved as 'data.{molecule}_sphere_charged', need futher modification")
 # Be aware that the new data file need to be mannually modifed a bit. 
 # The atom type should be changed to 1 and a blank line need to be added after the line "Atoms # full"
+
+######################################  Run the comparison for the tunnel ########################################
+
+centerline_path = f'{path}/{molecule}_centerline_mole.xyz'
+centerline_coords = np.genfromtxt(centerline_path, skip_header=2, usecols=(1,2,3))  # shape: (500, 3)
+atom_coords, atom_charges = get_charged_atoms(pos_coordinates, neg_coordinates, pho_coordinates) # shape: (n_atoms, 3), shape: (n_atoms,)
+atom_charges = atom_charges * 1000
+bead_coords = np.array(wall_coordinates)       # shape: (n_beads, 3)
+bead_charges = np.array(q_effect) *1000        # shape: (n_beads,)
+
+centerline_distance, atomistic_potentials, cg_potentials = compare_charge_distributions(
+    centerline_coords, atom_coords, atom_charges, 
+    bead_coords, bead_charges, lamda_d, epsilon_0, epsilon_rel
+)
+
+# Create the comparison plot
+plot_comparison(centerline_distance, atomistic_potentials, cg_potentials, proportionality,
+                save_path=f'charge_distribution_comparison_{proportionality}.png')

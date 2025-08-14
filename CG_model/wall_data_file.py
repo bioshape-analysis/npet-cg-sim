@@ -1,11 +1,6 @@
-import stl
 from stl import mesh
 import numpy as np
 import trimesh
-import aspose.threed as a3d
-import pymeshlab as ml
-import pymeshlab
-
 
 # Some useful functions
 
@@ -183,22 +178,28 @@ def compute_edge_normals(stl_file):
     return edge_midpoints, edge_normals, edge_new_points
 
 
-# Example Usage for tunnel wall particles
-# Exactly the same processes for ribosome surface particles
+# Example Usage for tunnel wall particles and ribosome surface particles
 
 molecule = "4UG0"
+path = "/Path/To/Your/Data/Files"  # Replace with your actual path
 
 # Change .ply to .stl, make mesh structure readable in LAMMPS
-scene = a3d.Scene.from_file(f"/Users/Desktop/{molecule}_tunnel.ply")
-scene.save(f"/Users/Desktop/{molecule}_tunnel.stl")
+scene = trimesh.load(f"{path}/{molecule}_NPET.ply")
+scene.export(f"{path}/{molecule}_tunnel.stl")
 
-vertices, normals, new_points, centroids, normalized_vector = parse_stl(f'/Users/Desktop/{molecule}_tunnel.stl')
+scene = trimesh.load(f"{path}/{molecule}_ALPHA.ply")
+scene.export(f"{path}/{molecule}_sphere.stl")
 
-vertices, normals, new_points, centroids, normalized_vector = parse_sphere(f'/Users/Desktop/{molecule}_sphere.stl')
+vertices, normals, new_points, centroids, normalized_vector = parse_stl(f'{path}/{molecule}_tunnel.stl')
 
 # Append formatted coordinates to the output file
-output_filename = f'/Users/Desktop/data.tunnel' 
+output_filename = f"{path}/data.{molecule}_tunnel"
 write_data_file(output_filename,len(new_points))
 append_coordinates_to_file(output_filename, new_points)
 
+vertices, normals, new_points, centroids, normalized_vector = parse_sphere(f'{path}/{molecule}_sphere_more.stl')
 
+# Append formatted coordinates to the output file
+output_filename = f"{path}/data.{molecule}_sphere"
+write_data_file(output_filename,len(new_points))
+append_coordinates_to_file(output_filename, new_points/10)
