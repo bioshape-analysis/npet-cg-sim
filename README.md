@@ -40,17 +40,18 @@ To place the CG beads on the mesh structures of the tunnel and ribosome, follow 
 `wall_data_file.py`
 ```
 
-To map effective charges onto the CG beads of the tunnel and ribosome, follow the steps in 
-```
-# under the "CG_model" folder
-`charged_wall.py`
-```
-
-Two in.files in the "CG_model/LAMMPS/refinement" folder should be read sequentially by LAMMPS to reduce the size of the simulation system by removing overlapping CG beads:
+Next, two in.files in the "CG_model/LAMMPS/refinement" folder should be read sequentially by LAMMPS to reduce the size of the simulation system by removing overlapping CG beads:
 ```
 lmp_serial < in.merge_sphere
 lmp_serial < in.merge_tunnel
 ```
+
+Then map effective charges onto the CG beads of the tunnel and ribosome, follow the steps in 
+```
+# under the "CG_model" folder
+`charged_wall.py`
+```
+Note: The spherical tunnel structure should be extracted in advance from MOLE2.5 online and uploaded in PyMOL so that the tunnel centerline and the positions of charged residues can be collected in PyMOL.
 
 
 
