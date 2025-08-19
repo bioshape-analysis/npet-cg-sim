@@ -46,7 +46,7 @@ lmp_serial < in.merge_sphere
 lmp_serial < in.merge_tunnel
 ```
 
-Then map effective charges onto the CG beads of the tunnel and ribosome, follow the steps in 
+Then map effective charges onto the CG beads of the refined tunnel and ribosome models, following the steps in 
 ```
 # under the "CG_model" folder
 `charged_wall.py`
